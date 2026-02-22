@@ -1,5 +1,7 @@
 # 🖼️ WallArt
 
+![WallArt](Images/ss4.png)
+
 [![Download Now] ](https://github.com/shenfurkan/WallArt/releases/download/app/WallArtSetupV1.0.exe)
 
 > A Windows desktop wallpaper daemon that automatically fetches and displays fine art from world-class museum collections.
@@ -29,9 +31,6 @@ WallArt runs silently in the system tray and refreshes your desktop wallpaper on
 ---
 
 ## Screenshots
-
-### Main Image
-![Main Image](Images/ss4.png)
 
 ### Interface
 ![Interface](Images/ss3.png)
