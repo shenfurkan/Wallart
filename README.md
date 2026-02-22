@@ -1,9 +1,6 @@
 # 🖼️ WallArt
 
 ![WallArt](Images/ss4.png)
-
-[![Download Now] ](https://github.com/shenfurkan/WallArt/releases/download/app/WallArtSetupV1.0.exe)
-
 > A Windows desktop wallpaper daemon that automatically fetches and displays fine art from world-class museum collections.
 
 WallArt runs silently in the system tray and refreshes your desktop wallpaper on a schedule, pulling high-quality artwork from public museum APIs. Each image is processed to fit your display and annotated with the title, artist, and source institution.
@@ -57,7 +54,7 @@ WallArt runs silently in the system tray and refreshes your desktop wallpaper on
 
 ### Option A — Installer (recommended)
 
-1. Click the **[Download Now](https://github.com/shenfurkan/WallArt/releases/download/app/WallArtSetupV1.0.exe)** button at the top of this page, or download `WallArtSetupV1.0.exe` from the [Releases](https://github.com/shenfurkan/WallArt/releases/latest) page.
+1. Click the **[![Download Now](https://img.shields.io/badge/Download-WallArt%20v1.0-blue?style=for-the-badge&logo=windows)](https://github.com/shenfurkan/WallArt/releases/download/app/WallArtSetupV1.0.exe)** button at the top of this page, or download `WallArtSetupV1.0.exe` from the [Releases](https://github.com/shenfurkan/WallArt/releases/latest) page.
 2. Run the installer. No administrator rights required.
 3. Optionally tick **"Start WallArt with Windows"** during setup.
 4. The app launches after installation. It appears in the system tray.
