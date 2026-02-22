@@ -1,0 +1,25 @@
+# Build output
+bin/
+obj/
+
+# Installer compiled output (upload .exe to GitHub Releases manually)
+installer_output/
+
+# Logs & runtime output
+*.log
+run*.log
+build*.log
+run_utf8.txt
+vuln*.txt
+build_err.txt
+output.json
+
+# IDE & user-specific
+.vs/
+*.user
+*.suo
+.idea/
+
+# OS
+Thumbs.db
+desktop.ini
