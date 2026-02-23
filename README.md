@@ -1,4 +1,4 @@
-# 🖼️ WallArt
+# WallArt
 
 ![WallArt](Images/ss4.png)
 > A Windows desktop wallpaper daemon that automatically fetches and displays fine art from world-class museum collections.
