@@ -163,11 +163,14 @@ public class MainViewModel : ViewModelBase
             _logService.Log("Cache cleared.");
         });
         RestoreCommand = new RelayCommand(_ => {
-            var mainWindow = System.Windows.Application.Current.MainWindow;
+            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
             if (mainWindow == null || !mainWindow.IsLoaded || !mainWindow.IsVisible)
             {
-                mainWindow = new MainWindow(this);
-                System.Windows.Application.Current.MainWindow = mainWindow;
+                if (mainWindow == null)
+                {
+                    mainWindow = new MainWindow(this);
+                    System.Windows.Application.Current.MainWindow = mainWindow;
+                }
                 mainWindow.Show();
             }
             else

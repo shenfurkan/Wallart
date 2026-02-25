@@ -35,8 +35,10 @@ public partial class App : Application
     {
         this.DispatcherUnhandledException += (s, e) =>
         {
-            Console.WriteLine($"UNHANDLED EXCEPTION: {e.Exception}");
+            System.IO.File.WriteAllText("crash_log.txt", e.Exception.ToString());
+            e.Handled = true;
         };
+
         var services = new ServiceCollection();
 
         services.AddSingleton<IConfigurationService, ConfigurationService>();
