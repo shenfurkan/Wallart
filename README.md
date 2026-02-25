@@ -48,19 +48,12 @@ WallArt runs quietly in the background and updates your desktop wallpaper on a c
 
 ## Installation
 
-### Option A — Installer (Recommended)
+### Installer (Recommended)
 
-1. Click the **[![Download Now](https://img.shields.io/badge/Download-WallArt%20v1.0-blue?style=for-the-badge&logo=windows)](https://github.com/shenfurkan/WallArt/releases/download/app/WallArtSetupV1.0.exe)** button at the top of this page, or download `WallArtSetupV1.0.exe` from the [Releases](https://github.com/shenfurkan/Wallart/releases/latest) page.
+1. Click the **[[Download ] (https://github.com/shenfurkan/WallArt/releases/download/app)** button
 2. Run the installer. No administrator rights are required.
-3. Optionally select **"Start WallArt with Windows"** during setup.
-4. The application will launch automatically and reside in the system tray.
+3 The application will launch automatically and reside in the system tray.
 
-### Option B — Portable
-
-1. Download and extract the portable ZIP from the [Releases](https://github.com/shenfurkan/Wallart/releases) page.
-2. Run `WallArt.exe`.
-
----
 
 ## Building from Source
 
