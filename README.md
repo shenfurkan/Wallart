@@ -46,13 +46,11 @@ WallArt runs quietly in the background and updates your desktop wallpaper on a c
 |---|---|
 | OS | Windows 10 / 11 |
 
-## Installation
-
 ### Installer (Recommended)
 
-1. Click the **[[Download ] (https://github.com/shenfurkan/WallArt/releases/download/app)** button
+1. Click the [Download](https://github.com/shenfurkan/Wallart/releases) button
 2. Run the installer. No administrator rights are required.
-3 The application will launch automatically and reside in the system tray.
+3 The application will launch automatically  start on background.
 
 
 ## Building from Source
