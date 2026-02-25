@@ -33,6 +33,10 @@ public partial class App : Application
 
     public App()
     {
+        this.DispatcherUnhandledException += (s, e) =>
+        {
+            Console.WriteLine($"UNHANDLED EXCEPTION: {e.Exception}");
+        };
         var services = new ServiceCollection();
 
         services.AddSingleton<IConfigurationService, ConfigurationService>();
@@ -92,7 +96,43 @@ public partial class App : Application
         // Ensure MainViewModel is initialized (starts background fetch timer)
         _ = mainViewModel.UpdateInterval;
 
-        _trayIcon = (H.NotifyIcon.TaskbarIcon)FindResource("MainTrayIcon");
+        var uri = new Uri("pack://application:,,,/Wallart.ico");
+        var streamInfo = System.Windows.Application.GetResourceStream(uri);
+        System.Drawing.Icon? winApiIcon = null;
+        if (streamInfo != null)
+        {
+            winApiIcon = new System.Drawing.Icon(streamInfo.Stream);
+        }
+
+        _trayIcon = new H.NotifyIcon.TaskbarIcon
+        {
+            ToolTipText = "WallArt Daemon",
+            Icon = winApiIcon,
+            MenuActivation = H.NotifyIcon.Core.PopupActivationMode.RightClick
+        };
+        
+        // Tray Double Click
+        _trayIcon.TrayMouseDoubleClick += (s, args) => 
+        {
+            mainViewModel.RestoreCommand.Execute(null);
+        };
+        
+        // Context Menu
+        var contextMenu = new System.Windows.Controls.ContextMenu();
+        
+        var nextItem = new System.Windows.Controls.MenuItem { Header = "Next Artwork", Command = mainViewModel.ForceUpdateCommand };
+        var cacheItem = new System.Windows.Controls.MenuItem { Header = "Open Cache", Command = mainViewModel.OpenCacheCommand };
+        var restoreItem = new System.Windows.Controls.MenuItem { Header = "Restore UI", Command = mainViewModel.RestoreCommand };
+        var exitItem = new System.Windows.Controls.MenuItem { Header = "Exit", Command = mainViewModel.ExitCommand };
+        
+        contextMenu.Items.Add(nextItem);
+        contextMenu.Items.Add(cacheItem);
+        contextMenu.Items.Add(restoreItem);
+        contextMenu.Items.Add(new System.Windows.Controls.Separator());
+        contextMenu.Items.Add(exitItem);
+        
+        _trayIcon.ContextMenu = contextMenu;
+        _trayIcon.Visibility = Visibility.Visible;
         _trayIcon.DataContext = mainViewModel;
         
         if (!e.Args.Contains("--autostart"))
