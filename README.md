@@ -38,8 +38,6 @@ WallArt runs quietly in the background and updates your desktop wallpaper on a c
 ### Museum Selection
 ![Museum Section](Images/choose.png)
 
----
-
 ## Requirements
 
 | Requirement | Detail |
@@ -61,47 +59,10 @@ cd WallArt
 dotnet build
 ```
 
-To publish a self-contained executable:
-
-```powershell
-dotnet publish -c Release -r win-x64 --self-contained true
-```
-
 ### Packaging the Installer
 
 Requires [Inno Setup 6+](https://jrsoftware.org/isdl.php).
 
-```powershell
-ISCC.exe installer.iss
-```
-
-The installer will be generated in `installer_output\WallArt_Setup.exe`.
-
----
-
-## Usage
-
-| Action | Instructions |
-|---|---|
-| Open UI | Double-click the tray icon |
-| Skip to next artwork | Right-click tray → **Dislike (Next)**, or click **Dislike** in the UI |
-| Like current artwork | Click **Like** in the UI (appends to favorites) |
-| Open image cache | Right-click tray → **Open Cache** |
-| Exit | Right-click tray → **Exit** |
-
-### Settings
-
-| Setting | Default | Description |
-|---|---|---|
-| Update interval | 60 min | Frequency of wallpaper updates |
-| Cache size | 50 | Maximum number of images kept locally |
-| Autostart | On | Launch automatically with Windows |
-| Background blur | 0 | Gaussian blur radius for the wallpaper |
-| Background dimming | 0 | Dark overlay opacity (0 = none, 1 = fully black) |
-| Typography position | Top Right | Alignment of the artwork label |
-| Typography scale | 1.0 | Size multiplier for the text overlay |
-
----
 
 ## Architecture
 
