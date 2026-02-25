@@ -29,6 +29,7 @@ file sealed class HttpsEnforcingHandler : DelegatingHandler
 public partial class App : Application
 {
     private ServiceProvider _serviceProvider;
+    private H.NotifyIcon.TaskbarIcon? _trayIcon;
 
     public App()
     {
@@ -91,35 +92,8 @@ public partial class App : Application
         // Ensure MainViewModel is initialized (starts background fetch timer)
         _ = mainViewModel.UpdateInterval;
 
-        var trayIcon = new H.NotifyIcon.TaskbarIcon
-        {
-            ToolTipText = "WallArt Daemon",
-            IconSource = new System.Windows.Media.Imaging.BitmapImage(new System.Uri("pack://application:,,,/Wallart.ico")),
-            MenuActivation = H.NotifyIcon.Core.PopupActivationMode.RightClick
-        };
-        
-        // Tray Double Click
-        trayIcon.TrayMouseDoubleClick += (s, args) => 
-        {
-            mainViewModel.RestoreCommand.Execute(null);
-        };
-        
-        // Context Menu
-        var contextMenu = new System.Windows.Controls.ContextMenu();
-        
-        var nextItem = new System.Windows.Controls.MenuItem { Header = "Dislike (Next)", Command = mainViewModel.UpdateCommand };
-        var cacheItem = new System.Windows.Controls.MenuItem { Header = "Open Cache", Command = mainViewModel.OpenCacheCommand };
-        var restoreItem = new System.Windows.Controls.MenuItem { Header = "Restore UI", Command = mainViewModel.RestoreCommand };
-        var exitItem = new System.Windows.Controls.MenuItem { Header = "Exit", Command = mainViewModel.ExitCommand };
-        
-        contextMenu.Items.Add(nextItem);
-        contextMenu.Items.Add(cacheItem);
-        contextMenu.Items.Add(restoreItem);
-        contextMenu.Items.Add(new System.Windows.Controls.Separator());
-        contextMenu.Items.Add(exitItem);
-        
-        trayIcon.ContextMenu = contextMenu;
-        trayIcon.Visibility = Visibility.Visible;
+        _trayIcon = (H.NotifyIcon.TaskbarIcon)FindResource("MainTrayIcon");
+        _trayIcon.DataContext = mainViewModel;
         
         if (!e.Args.Contains("--autostart"))
         {
@@ -173,6 +147,7 @@ public partial class App : Application
 
     private void Application_Exit(object sender, ExitEventArgs e)
     {
+        _trayIcon?.Dispose();
         _serviceProvider.Dispose();
     }
 }

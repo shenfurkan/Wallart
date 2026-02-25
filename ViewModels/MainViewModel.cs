@@ -53,12 +53,12 @@ public class MainViewModel : ViewModelBase
             {
                 _configService.Update(c => c.UpdateIntervalMinutes = value);
                 OnPropertyChanged();
-                ResetTimer();
+                CheckAndTriggerUpdate();
             }
         }
     }
 
-    public ObservableCollection<int> AvailableIntervals { get; } = new(new[] { 15, 30, 60, 120, 240, 1440 });
+    public ObservableCollection<int> AvailableIntervals { get; } = new(new[] { 60, 360, 1440 });
 
     public double BackgroundDimming
     {
@@ -128,7 +128,7 @@ public class MainViewModel : ViewModelBase
         set { _activeArtwork = value; OnPropertyChanged(); }
     }
 
-    public ICommand UpdateCommand { get; }
+    public ICommand ForceUpdateCommand { get; }
     public ICommand TogglePauseCommand { get; }
     public ICommand ClearCacheCommand { get; }
     public ICommand RestoreCommand { get; }
@@ -150,16 +150,9 @@ public class MainViewModel : ViewModelBase
 
         ActiveArtwork = _configService.Current.ActiveArtwork;
         
-        UpdateCommand = new RelayCommand(async _ => 
+        ForceUpdateCommand = new RelayCommand(async _ => 
         {
-            if (ActiveArtwork != null)
-            {
-                _configService.Update(c => {
-                    if (!c.BlacklistedArtworkIds.Contains(ActiveArtwork.Id))
-                        c.BlacklistedArtworkIds.Add(ActiveArtwork.Id);
-                });
-                _logService.Log($"Blacklisted artwork: {ActiveArtwork.Id}");
-            }
+            _logService.Log("User requested wallpaper change.");
             await UpdateWallpaperAsync();
         }, _ => !IsUpdating);
         
@@ -219,17 +212,23 @@ public class MainViewModel : ViewModelBase
             _logService.Log($"⚠ {warning}");
 
         _timer = new DispatcherTimer();
-        _timer.Tick += async (s, e) => await UpdateWallpaperAsync();
-        ResetTimer();
+        _timer.Interval = TimeSpan.FromMinutes(1);
+        _timer.Tick += (s, e) => CheckAndTriggerUpdate();
+        _timer.Start();
+        
+        CheckAndTriggerUpdate();
         
         _logService.Log("WallArt initialized.");
     }
 
-    private void ResetTimer()
+    private void CheckAndTriggerUpdate()
     {
-        _timer.Stop();
-        _timer.Interval = TimeSpan.FromMinutes(UpdateInterval);
-        _timer.Start();
+        if (IsPaused || IsUpdating) return;
+        var sinceLastUpdate = DateTime.Now - _configService.Current.LastUpdateTime;
+        if (sinceLastUpdate.TotalMinutes >= UpdateInterval)
+        {
+            _ = UpdateWallpaperAsync();
+        }
     }
 
     private async Task UpdateWallpaperAsync()
@@ -260,6 +259,7 @@ public class MainViewModel : ViewModelBase
                     {
                         c.History.RemoveAt(c.History.Count - 1);
                     }
+                    c.LastUpdateTime = DateTime.Now;
                 });
                 
                 _wallpaperManager.ManageCache();

@@ -7,6 +7,7 @@ namespace WallArt.Models;
 public class WallArtConfig
 {
     public int UpdateIntervalMinutes { get; set; } = 60;
+    public DateTime LastUpdateTime { get; set; } = DateTime.MinValue;
     public bool AutostartEnabled { get; set; } = true;
     public int CacheBounds { get; set; } = 50;
     public ArtworkResult? ActiveArtwork { get; set; }
@@ -29,7 +30,10 @@ public class WallArtConfig
     /// </summary>
     public void Validate()
     {
-        UpdateIntervalMinutes = Math.Clamp(UpdateIntervalMinutes, 1, 1440);
+        int[] allowedIntervals = { 60, 360, 1440 };
+        if (!allowedIntervals.Contains(UpdateIntervalMinutes))
+            UpdateIntervalMinutes = 60;
+            
         CacheBounds           = Math.Clamp(CacheBounds, 0, 1000);
         BackgroundDimming     = Math.Clamp(BackgroundDimming, 0.0, 1.0);
         BackgroundBlur        = Math.Clamp(BackgroundBlur, 0.0, 100.0);

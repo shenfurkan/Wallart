@@ -1,9 +1,28 @@
 ﻿<Application x:Class="WallArt.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tb="clr-namespace:H.NotifyIcon;assembly=H.NotifyIcon.Wpf"
              Startup="Application_Startup"
-             Exit="Application_Exit">
+             Exit="Application_Exit"
+             ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <tb:TaskbarIcon x:Key="MainTrayIcon"
+                        IconSource="pack://application:,,,/Wallart.ico"
+                        ToolTipText="WallArt Daemon"
+                        MenuActivation="RightClick"
+                        DoubleClickCommand="{Binding RestoreCommand}"
+                        Visibility="Visible">
+            <tb:TaskbarIcon.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Next Artwork" Command="{Binding ForceUpdateCommand}" />
+                    <MenuItem Header="Open Cache" Command="{Binding OpenCacheCommand}" />
+                    <MenuItem Header="Restore UI" Command="{Binding RestoreCommand}" />
+                    <Separator />
+                    <MenuItem Header="Exit" Command="{Binding ExitCommand}" />
+                </ContextMenu>
+            </tb:TaskbarIcon.ContextMenu>
+        </tb:TaskbarIcon>
     </Application.Resources>
 </Application>

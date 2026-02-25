@@ -240,10 +240,9 @@
                                 </StackPanel>
                             </Grid>
                             
-                            <!-- Like/Dislike Row -->
+                            <!-- Manual Update Row -->
                             <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                                <Button Content="👎 Dislike" Command="{Binding UpdateCommand}" Style="{StaticResource PrimaryButton}" ToolTip="Fetch new artwork" Margin="0,0,8,0"/>
-                                <Button Content="👍 Like" Style="{StaticResource SecondaryButton}" ToolTip="Keep this artwork"/>
+                                <Button Content="Change Wallpaper Now" Command="{Binding ForceUpdateCommand}" Style="{StaticResource PrimaryButton}" ToolTip="Fetch a new artwork immediately" Margin="0,0,8,0"/>
                             </StackPanel>
                             
                             <StackPanel Orientation="Horizontal" Margin="0,20,0,0" Visibility="{Binding IsUpdating, Converter={StaticResource BooleanToVisibilityConverter}}">
