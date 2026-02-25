@@ -1,28 +1,26 @@
 # WallArt
 
 ![WallArt](Images/ss4.png)
-> A Windows desktop wallpaper daemon that automatically fetches and displays fine art from world-class museum collections.
+> A Windows desktop wallpaper daemon that automatically fetches and displays fine art from world class museum collections.
 
-WallArt runs silently in the system tray and refreshes your desktop wallpaper on a schedule, pulling high-quality artwork from public museum APIs. Each image is processed to fit your display and annotated with the title, artist, and source institution.
-
+WallArt runs quietly in the background and updates your desktop wallpaper according to a specific schedule, fetching high-quality artworks from public museum APIs. Each image is processed to fit your screen and is accompanied by a description including the title, artist, and source institution information. As it is still in development, it may encounter some errors; please do not hesitate to provide feedback.
 ---
 
 ## Features
 
 - **Automatic wallpaper updates** — fetches a new artwork at a configurable interval (default: every 60 minutes)
-- **Multi-museum sources** — aggregates artwork from four major public collections:
+- **Multi museum sources** — aggregates artwork from four major public collections:
   - 🏛️ Art Institute of Chicago
   - 🏛️ Metropolitan Museum of Art (New York)
   - 🏛️ Cleveland Museum of Art
   - 🏛️ Victoria and Albert Museum (London)
 - **Smart image processing** — resizes and crops artwork to 4K (3840×2160) using Lanczos3 resampling; letterboxes portraits with a black background
 - **Typography overlay** — renders the artwork title, artist name, and source institution directly onto the wallpaper using Google Sans (configurable position and scale)
-- **Like / Dislike** — skip unwanted artwork immediately; disliked works are blacklisted so they never appear again
+- **Change Wallpaper Button ** — skip unwanted artwork immediately
 - **Per-provider toggles** — enable or disable individual museum sources from the Settings tab
-- **Dimming & blur controls** — apply Gaussian blur and/or a dark overlay for use as a desktop background behind light-coloured widgets
+- **Dimming & blur controls** — apply Gaussian blur and/or a dark overlay for use as a desktop background behind light-coloured widgets (optional)
 - **Local cache** — downloaded images are saved to `Pictures\Wallpaper Art` for browsing; configurable cache size limit (default: 50 images)
-- **System tray daemon** — runs with below-normal process priority; double-click the tray icon to open the UI
-- **Windows autostart** — optional registry entry to launch WallArt silently with Windows (`--autostart` flag)
+- **Windows autostart** — registry entry to launch WallArt silently with Windows (`--autostart` flag)
 - **Multi-monitor support** — sets the wallpaper on every connected monitor via the `IDesktopWallpaper` COM API, with a fallback to `SystemParametersInfo`
 
 ---
