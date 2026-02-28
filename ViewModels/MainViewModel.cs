@@ -18,7 +18,7 @@ public class MainViewModel : ViewModelBase
     private readonly ArtProviderOrchestrator _orchestrator;
     private readonly IImageProcessingService _imageService;
     private readonly IWallpaperManager _wallpaperManager;
-    private DispatcherTimer _timer;
+    private SmartScheduler _scheduler;
     private CancellationTokenSource? _cts;
 
     public ObservableCollection<string> Logs => _logService.Logs;
@@ -38,8 +38,8 @@ public class MainViewModel : ViewModelBase
         { 
             _isPaused = value; 
             OnPropertyChanged();
-            if (_isPaused) _timer.Stop();
-            else _timer.Start();
+            if (_isPaused) _scheduler.Stop();
+            else _scheduler.Start();
             _logService.Log(value ? "Background fetching paused." : "Background fetching resumed.");
         }
     }
@@ -53,38 +53,17 @@ public class MainViewModel : ViewModelBase
             {
                 _configService.Update(c => c.UpdateIntervalMinutes = value);
                 OnPropertyChanged();
-                CheckAndTriggerUpdate();
+                
+                var newInterval = TimeSpan.FromMinutes(value);
+                _scheduler?.UpdateInterval(newInterval);
+                
+                // Immediately force an update since the user just changed the settings explicitly
+                _ = UpdateWallpaperAsync();
             }
         }
     }
 
     public ObservableCollection<int> AvailableIntervals { get; } = new(new[] { 60, 360, 1440 });
-
-    public double BackgroundDimming
-    {
-        get => _configService.Current.BackgroundDimming;
-        set { _configService.Update(c => c.BackgroundDimming = value); OnPropertyChanged(); }
-    }
-
-    public double BackgroundBlur
-    {
-        get => _configService.Current.BackgroundBlur;
-        set { _configService.Update(c => c.BackgroundBlur = value); OnPropertyChanged(); }
-    }
-
-    public string TypographyPosition
-    {
-        get => _configService.Current.TypographyPosition;
-        set { _configService.Update(c => c.TypographyPosition = value); OnPropertyChanged(); }
-    }
-
-    public double TypographyScale
-    {
-        get => _configService.Current.TypographyScale;
-        set { _configService.Update(c => c.TypographyScale = value); OnPropertyChanged(); }
-    }
-
-    public ObservableCollection<string> AvailablePositions { get; } = new(new[] { "TopRight", "BottomRight", "TopLeft", "BottomLeft" });
 
     public ObservableCollection<ArtworkResult> History => new(_configService.Current.History);
     
@@ -153,6 +132,7 @@ public class MainViewModel : ViewModelBase
         ForceUpdateCommand = new RelayCommand(async _ => 
         {
             _logService.Log("User requested wallpaper change.");
+            _scheduler?.ManualTriggerFired(); // Push background timer out
             await UpdateWallpaperAsync();
         }, _ => !IsUpdating);
         
@@ -164,23 +144,29 @@ public class MainViewModel : ViewModelBase
         });
         RestoreCommand = new RelayCommand(_ => {
             var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
-            if (mainWindow == null || !mainWindow.IsLoaded || !mainWindow.IsVisible)
+            bool isClosed = mainWindow == null || (!mainWindow.IsLoaded && !mainWindow.IsVisible && mainWindow.IsInitialized);
+            
+            if (mainWindow == null || isClosed)
             {
-                if (mainWindow == null)
-                {
-                    mainWindow = new MainWindow(this);
-                    System.Windows.Application.Current.MainWindow = mainWindow;
-                }
+                mainWindow = new MainWindow(this);
+                System.Windows.Application.Current.MainWindow = mainWindow;
                 mainWindow.Show();
             }
             else
             {
+                mainWindow.ShowInTaskbar = true;
+                mainWindow.Show();
                 if (mainWindow.WindowState == System.Windows.WindowState.Minimized)
                     mainWindow.WindowState = System.Windows.WindowState.Normal;
                 mainWindow.Activate();
             }
         });
         ExitCommand = new RelayCommand(_ => {
+            var mWindow = System.Windows.Application.Current.MainWindow as MainWindow;
+            if (mWindow != null)
+            {
+                mWindow.IsExplicitClose = true;
+            }
             System.Windows.Application.Current.Shutdown();
         });
         OpenCacheCommand = new RelayCommand(_ =>
@@ -214,24 +200,18 @@ public class MainViewModel : ViewModelBase
         if (_configService.ConfigLoadWarning is { } warning)
             _logService.Log($"⚠ {warning}");
 
-        _timer = new DispatcherTimer();
-        _timer.Interval = TimeSpan.FromMinutes(1);
-        _timer.Tick += (s, e) => CheckAndTriggerUpdate();
-        _timer.Start();
+        _scheduler = new SmartScheduler(UpdateWallpaperAsync, TimeSpan.FromMinutes(UpdateInterval), _logService);
+        _scheduler.Start();
         
-        CheckAndTriggerUpdate();
-        
-        _logService.Log("WallArt initialized.");
-    }
-
-    private void CheckAndTriggerUpdate()
-    {
-        if (IsPaused || IsUpdating) return;
+        // On boot check if we are overdue 
         var sinceLastUpdate = DateTime.Now - _configService.Current.LastUpdateTime;
         if (sinceLastUpdate.TotalMinutes >= UpdateInterval)
         {
+            _logService.Log("App launched and interval has already expired. Fetching immediately...");
             _ = UpdateWallpaperAsync();
         }
+        
+        _logService.Log("WallArt initialized with Smart System Scheduler.");
     }
 
     private async Task UpdateWallpaperAsync()
@@ -286,10 +266,6 @@ public class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logService.Log($"Error during update: {ex.Message}");
-            SixLabors.ImageSharp.Configuration.Default.MemoryAllocator.ReleaseRetainedResources();
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
         }
         finally
         {

@@ -28,5 +28,17 @@ public class LogService : ILogService
         {
             Logs.Add(formattedMessage);
         }
+        
+        var d = Application.Current?.Dispatcher;
+        if (d != null && !d.CheckAccess())
+        {
+            d.BeginInvoke(() => {
+                while (Logs.Count > 100) Logs.RemoveAt(0);
+            });
+        }
+        else
+        {
+            while (Logs.Count > 100) Logs.RemoveAt(0);
+        }
     }
 }

@@ -104,16 +104,16 @@ public class WallpaperManager : IWallpaperManager
         if (bounds <= 0) return;
         
         var di = new DirectoryInfo(_cacheDirectory);
-        var files = di.GetFiles("*.jpg").Concat(di.GetFiles("*.png")).OrderBy(f => f.LastWriteTime).ToList();
+        var fileInfos = di.EnumerateFiles("*.jpg").Concat(di.EnumerateFiles("*.png")).ToList();
 
-        if (files.Count > bounds)
+        if (fileInfos.Count > bounds)
         {
-            var toRemove = files.Count - bounds;
-            for (int i = 0; i < toRemove; i++)
+            var filesToDelete = fileInfos.OrderBy(f => f.LastWriteTime).Take(fileInfos.Count - bounds);
+            foreach(var file in filesToDelete)
             {
                 try
                 {
-                    files[i].Delete();
+                    file.Delete();
                 }
                 catch { /* Ignore delete errors */ }
             }

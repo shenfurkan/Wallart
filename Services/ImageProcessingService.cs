@@ -15,7 +15,7 @@ public class ImageProcessingService : IImageProcessingService
 {
     private readonly string _cacheDirectory;
     private readonly ILogService _logService;
-    private readonly FontFamily _fontFamily;
+    private readonly SixLabors.Fonts.FontFamily _fontFamily;
 
     private readonly IConfigurationService _configService;
 
@@ -55,7 +55,7 @@ public class ImageProcessingService : IImageProcessingService
     public async Task<string> ProcessAndSaveArtworkAsync(byte[] imageBytes, ArtworkResult metadata, CancellationToken cancellationToken = default)
     {
         _logService.Log("Processing image...");
-        using var image = Image.Load(imageBytes);
+        using var image = SixLabors.ImageSharp.Image.Load(imageBytes);
 
         var targetWidth = 3840;
         var targetHeight = 2160;
@@ -84,24 +84,10 @@ public class ImageProcessingService : IImageProcessingService
             }));
         }
 
-        var blur = _configService.Current.BackgroundBlur;
-        var dimming = _configService.Current.BackgroundDimming;
 
-        image.Mutate(x =>
-        {
-            if (blur > 0)
-            {
-                x.GaussianBlur((float)blur);
-            }
-            if (dimming > 0)
-            {
-                x.Fill(Color.Black.WithAlpha((float)dimming));
-            }
-        });
 
         DrawTypography(image, metadata);
 
-        // Sanitize the API-provided ID before using it in a filename to prevent path traversal
         var safeId = SecurityHelper.SanitizeId(metadata.Id);
         var filename = $"{DateTime.Now:yyyyMMdd_HHmmss}_{safeId}.jpg";
         // Verify the resolved path stays within the cache directory
@@ -113,81 +99,35 @@ public class ImageProcessingService : IImageProcessingService
         return path;
     }
 
-    private void DrawTypography(Image image, ArtworkResult metadata)
+    private void DrawTypography(SixLabors.ImageSharp.Image image, ArtworkResult metadata)
     {
         var paddingX = image.Width * 0.03f;
         var paddingY = image.Height * 0.03f;
         var maxTextWidth = (image.Width * 0.55f) - paddingX;
         
         var text = $"{metadata.Title}\n{metadata.Artist}\n{metadata.ProviderName}";
-        
-        var scale = (float)_configService.Current.TypographyScale;
-        float fontSize = (image.Width * 0.02f) * scale;
-        
+        float fontSize = image.Width * 0.02f;
         Font font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
         
-        var position = _configService.Current.TypographyPosition;
-        PointF origin;
-        HorizontalAlignment hAlign;
-        VerticalAlignment vAlign;
-        TextAlignment tAlign;
-
-        switch (position)
-        {
-            case "TopLeft":
-                origin = new PointF(paddingX, paddingY);
-                hAlign = HorizontalAlignment.Left;
-                vAlign = VerticalAlignment.Top;
-                tAlign = TextAlignment.Start;
-                break;
-            case "BottomLeft":
-                origin = new PointF(paddingX, image.Height - paddingY);
-                hAlign = HorizontalAlignment.Left;
-                vAlign = VerticalAlignment.Bottom;
-                tAlign = TextAlignment.Start;
-                break;
-            case "BottomRight":
-                origin = new PointF(image.Width - paddingX, image.Height - paddingY);
-                hAlign = HorizontalAlignment.Right;
-                vAlign = VerticalAlignment.Bottom;
-                tAlign = TextAlignment.End;
-                break;
-            case "TopRight":
-            default:
-                origin = new PointF(image.Width - paddingX, paddingY);
-                hAlign = HorizontalAlignment.Right;
-                vAlign = VerticalAlignment.Top;
-                tAlign = TextAlignment.End;
-                break;
-        }
+        PointF origin = new PointF(image.Width - paddingX, paddingY);
 
         RichTextOptions options = new RichTextOptions(font)
         {
             Origin = origin,
-            HorizontalAlignment = hAlign,
-            VerticalAlignment = vAlign,
-            TextAlignment = tAlign,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            TextAlignment = TextAlignment.End,
             WrappingLength = maxTextWidth,
             LineSpacing = 1.2f
         };
 
-        while (fontSize > 10 * scale)
+        try 
         {
-            font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
-            options.Font = font;
-            var box = TextMeasurer.MeasureSize(text, new TextOptions(font) { WrappingLength = options.WrappingLength });
-            
-            if (box.Width <= maxTextWidth)
-            {
-                break;
-            }
-            fontSize -= (2f * scale);
-        }
-
-        image.Mutate(x => x.DrawText(
-            options,
-            text,
-            Brushes.Solid(Color.White)
-        ));
+            image.Mutate(x => x.DrawText(
+                options,
+                text,
+                Brushes.Solid(Color.White)
+            ));
+        } catch { } // If text drawing fails gracefully bypass
     }
 }

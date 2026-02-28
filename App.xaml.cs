@@ -26,10 +26,10 @@ file sealed class HttpsEnforcingHandler : DelegatingHandler
     }
 }
 
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     private ServiceProvider _serviceProvider;
-    private H.NotifyIcon.TaskbarIcon? _trayIcon;
+    private static Mutex? _singleInstanceMutex;
 
     public App()
     {
@@ -74,9 +74,23 @@ public partial class App : Application
         _serviceProvider = services.BuildServiceProvider();
     }
 
-    private void Application_Startup(object sender, StartupEventArgs e)
+    private async void Application_Startup(object sender, StartupEventArgs e)
     {
-        if (e.Args.Contains("--uninstall"))
+        _singleInstanceMutex = new Mutex(true, "Global\\WallArtDaemonSingleInstance", out bool createdNew);
+        if (!createdNew)
+        {
+            // Another instance is already running; terminate instantly to avoid background process accumulation.
+            Environment.Exit(0);
+            return;
+        }
+
+        if (e.Args.Contains("--autostart"))
+        {
+            // Give Explorer time to show the taskbar before we try to inject an icon into it.
+            // This prevents the "invisible tray icon" issue on computers that start up very quickly.
+            await Task.Delay(4000);
+        }
+        else if (e.Args.Contains("--uninstall"))
         {
             RunUninstall();
             Shutdown();
@@ -98,45 +112,6 @@ public partial class App : Application
         // Ensure MainViewModel is initialized (starts background fetch timer)
         _ = mainViewModel.UpdateInterval;
 
-        var uri = new Uri("pack://application:,,,/Wallart.ico");
-        var streamInfo = System.Windows.Application.GetResourceStream(uri);
-        System.Drawing.Icon? winApiIcon = null;
-        if (streamInfo != null)
-        {
-            winApiIcon = new System.Drawing.Icon(streamInfo.Stream);
-        }
-
-        _trayIcon = new H.NotifyIcon.TaskbarIcon
-        {
-            ToolTipText = "WallArt Daemon",
-            Icon = winApiIcon,
-            MenuActivation = H.NotifyIcon.Core.PopupActivationMode.RightClick
-        };
-        
-        // Tray Double Click
-        _trayIcon.TrayMouseDoubleClick += (s, args) => 
-        {
-            mainViewModel.RestoreCommand.Execute(null);
-        };
-        
-        // Context Menu
-        var contextMenu = new System.Windows.Controls.ContextMenu();
-        
-        var nextItem = new System.Windows.Controls.MenuItem { Header = "Next Artwork", Command = mainViewModel.ForceUpdateCommand };
-        var cacheItem = new System.Windows.Controls.MenuItem { Header = "Open Cache", Command = mainViewModel.OpenCacheCommand };
-        var restoreItem = new System.Windows.Controls.MenuItem { Header = "Restore UI", Command = mainViewModel.RestoreCommand };
-        var exitItem = new System.Windows.Controls.MenuItem { Header = "Exit", Command = mainViewModel.ExitCommand };
-        
-        contextMenu.Items.Add(nextItem);
-        contextMenu.Items.Add(cacheItem);
-        contextMenu.Items.Add(restoreItem);
-        contextMenu.Items.Add(new System.Windows.Controls.Separator());
-        contextMenu.Items.Add(exitItem);
-        
-        _trayIcon.ContextMenu = contextMenu;
-        _trayIcon.Visibility = Visibility.Visible;
-        _trayIcon.DataContext = mainViewModel;
-        
         if (!e.Args.Contains("--autostart"))
         {
             mainViewModel.RestoreCommand.Execute(null);
@@ -189,7 +164,6 @@ public partial class App : Application
 
     private void Application_Exit(object sender, ExitEventArgs e)
     {
-        _trayIcon?.Dispose();
         _serviceProvider.Dispose();
     }
 }

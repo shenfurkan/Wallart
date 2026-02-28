@@ -5,8 +5,7 @@
         Title="WallArt" Height="560" Width="540" 
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="CanResizeWithGrip" WindowStartupLocation="CenterScreen"
-        Foreground="#EEEEEE" Icon="pack://application:,,,/Wallart.ico"
-        StateChanged="Window_StateChanged" Closing="Window_Closing">
+        Foreground="#EEEEEE" Icon="pack://application:,,,/Wallart.ico">
     <Window.Resources>
         <SolidColorBrush x:Key="BgBrush" Color="#1A1A1A"/>
         <SolidColorBrush x:Key="PanelBrush" Color="#252525"/>
@@ -167,7 +166,6 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="36"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
@@ -264,54 +262,7 @@
                                 </StackPanel>
                             </TabItem>
                             
-                            <!-- Visual Settings Tab -->
-                            <TabItem Header="Visuals">
-                                <StackPanel Margin="0,16,0,0">
-                                    <TextBlock Text="Customize the appearance of your desktop wallpaper:" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,16"/>
-                                    
-                                    <Grid Margin="0,0,0,12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="40"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Background Blur" VerticalAlignment="Center" Foreground="{StaticResource TextBrush}"/>
-                                        <Slider Grid.Column="1" Maximum="20" Minimum="0" Value="{Binding BackgroundBlur}" VerticalAlignment="Center" Margin="8,0"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding BackgroundBlur, StringFormat={}{0:F1}}" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}" TextAlignment="Right"/>
-                                    </Grid>
-                                    
-                                    <Grid Margin="0,0,0,12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="40"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Background Dimming" VerticalAlignment="Center" Foreground="{StaticResource TextBrush}"/>
-                                        <Slider Grid.Column="1" Maximum="1" Minimum="0" LargeChange="0.1" SmallChange="0.05" Value="{Binding BackgroundDimming}" VerticalAlignment="Center" Margin="8,0"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding BackgroundDimming, StringFormat={}{0:P0}}" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}" TextAlignment="Right"/>
-                                    </Grid>
 
-                                    <Grid Margin="0,0,0,12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="40"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Text Scale" VerticalAlignment="Center" Foreground="{StaticResource TextBrush}"/>
-                                        <Slider Grid.Column="1" Maximum="3" Minimum="0.5" LargeChange="0.25" SmallChange="0.1" Value="{Binding TypographyScale}" VerticalAlignment="Center" Margin="8,0"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding TypographyScale, StringFormat={}{0:F1}x}" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}" TextAlignment="Right"/>
-                                    </Grid>
-
-                                    <Grid Margin="0,0,0,12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Text Position" VerticalAlignment="Center" Foreground="{StaticResource TextBrush}"/>
-                                        <ComboBox Grid.Column="1" ItemsSource="{Binding AvailablePositions}" SelectedItem="{Binding TypographyPosition}" Background="#111" Foreground="#111" BorderBrush="{StaticResource BorderBrush}"/>
-                                    </Grid>
-                                </StackPanel>
-                            </TabItem>
                             
                             <!-- History Tab -->
                             <TabItem Header="History">
@@ -329,40 +280,37 @@
                                     </ListBox>
                                 </Grid>
                             </TabItem>
+                            
+                            <!-- Event Log Tab -->
+                            <TabItem Header="Event Log">
+                                <Grid Margin="0,16,0,0">
+                                    <Border Background="#0C0A0A" BorderBrush="#332A2A" BorderThickness="1" CornerRadius="6" Padding="6">
+                                        <ListBox ItemsSource="{Binding Logs}" Background="Transparent" Foreground="#D0D0D0" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" FontFamily="Consolas" FontSize="12">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="4,2"/>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                            <ListBox.ItemContainerStyle>
+                                                <Style TargetType="ListBoxItem">
+                                                    <Setter Property="Focusable" Value="False"/>
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="ListBoxItem">
+                                                                <Border Background="{TemplateBinding Background}">
+                                                                    <ContentPresenter/>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </ListBox.ItemContainerStyle>
+                                        </ListBox>
+                                    </Border>
+                                </Grid>
+                            </TabItem>
                         </TabControl>
-                    </Border>
-                </Grid>
-
-                <!-- Event Log -->
-                <Grid Grid.Row="2" Margin="24,0,24,24">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="EVENT LOG" FontSize="11" FontWeight="Bold" FontFamily="Segoe UI" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"/>
-                    <Border Grid.Row="1" Background="#0C0A0A" BorderBrush="#332A2A" BorderThickness="1" CornerRadius="6" Padding="6">
-                        <ListBox ItemsSource="{Binding Logs}" Background="Transparent" Foreground="#D0D0D0" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" FontFamily="Consolas" FontSize="12">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="4,2"/>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                            <ListBox.ItemContainerStyle>
-                                <Style TargetType="ListBoxItem">
-                                    <Setter Property="Focusable" Value="False"/>
-                                    <Setter Property="Background" Value="Transparent"/>
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="ListBoxItem">
-                                                <Border Background="{TemplateBinding Background}">
-                                                    <ContentPresenter/>
-                                                </Border>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </ListBox.ItemContainerStyle>
-                        </ListBox>
                     </Border>
                 </Grid>
             </Grid>

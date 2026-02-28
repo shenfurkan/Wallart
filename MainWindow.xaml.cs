@@ -3,15 +3,51 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using WallArt.ViewModels;
+using System.Drawing;
+using System.Windows.Forms;
+using Application = System.Windows.Application;
 
 namespace WallArt;
 
 public partial class MainWindow : Window
 {
+    public bool IsExplicitClose { get; set; } = false;
+
+    private NotifyIcon? _notifyIcon;
+
     public MainWindow(MainViewModel viewModel)
     {
         InitializeComponent();
         DataContext = viewModel;
+
+        // Initialize Native Tray Icon
+        _notifyIcon = new NotifyIcon
+        {
+            Icon = new Icon(Application.GetResourceStream(new Uri("pack://application:,,,/Wallart.ico"))!.Stream),
+            Text = "WallArt",
+            Visible = true
+        };
+        
+        _notifyIcon.DoubleClick += (s, e) => RestoreWindow();
+        
+        var contextMenu = new ContextMenuStrip();
+        var exitItem = new ToolStripMenuItem("Exit WallArt");
+        exitItem.Click += (s, e) => 
+        {
+            IsExplicitClose = true;
+            _notifyIcon.Visible = false;
+            _notifyIcon.Dispose();
+            Application.Current.Shutdown();
+        };
+        contextMenu.Items.Add(exitItem);
+        _notifyIcon.ContextMenuStrip = contextMenu;
+    }
+
+    private void RestoreWindow()
+    {
+        this.Show();
+        this.WindowState = WindowState.Normal;
+        this.Activate();
     }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -24,24 +60,31 @@ public partial class MainWindow : Window
 
     private void MinimizeButton_Click(object sender, RoutedEventArgs e)
     {
-        this.WindowState = WindowState.Minimized;
+        ShrinkToTray();
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
-        this.Close();
+        ShrinkToTray();
+    }
+    
+    private void ShrinkToTray()
+    {
+        this.Hide();
     }
 
-    private void Window_StateChanged(object sender, EventArgs e)
+    protected override void OnClosing(CancelEventArgs e)
     {
-        if (WindowState == WindowState.Minimized)
+        if (!IsExplicitClose)
         {
-            this.Close();
+            e.Cancel = true;
+            ShrinkToTray();
         }
-    }
-
-    private void Window_Closing(object sender, CancelEventArgs e)
-    {
-        // Actually clsoe instead of hiding to save memory
+        else
+        {
+            _notifyIcon!.Visible = false;
+            _notifyIcon.Dispose();
+        }
+        base.OnClosing(e);
     }
 }
