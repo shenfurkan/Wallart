@@ -2,11 +2,9 @@
 
 ![WallArt](Images/header.png)
 
-> A Windows desktop wallpaper daemon that automatically fetches and displays fine art from world-class museum collections.
+> A Windows desktop wallpaper daemon that automatically fetches and displays fine art from world class museum collections.
 
 WallArt runs quietly in the background and updates your desktop wallpaper on a customizable schedule, fetching high-quality artworks from public museum APIs. Each image is processed to fit your screen perfectly and is accompanied by details including the title, artist, and source institution.
-
----
 
 ## Features
 
@@ -20,15 +18,13 @@ WallArt runs quietly in the background and updates your desktop wallpaper on a c
 - **Typography Overlay** — Renders artwork metadata (title, artist, and source) directly onto the wallpaper using the Google Sans font (configurable position and scale).
 - **Instant Refresh** — Skip any artwork immediately with a single click.
 - **Provider Customization** — Enable or disable individual museum sources via the Settings tab.
-- **Visual Enhancements** — Apply Gaussian blur and/or a dark overlay to ensure your desktop shortcuts remain legible (optional).
 - **Local Cache Management** — Downloaded images are saved to `Pictures\Wallpaper Art` for offline browsing; includes a configurable cache size limit (default: 50 images).
 - **Windows Autostart** — Simple registry-based integration to launch WallArt silently at login.
-- **Multi-Monitor Support** — Sets consistent wallpapers across every connected monitor via the `IDesktopWallpaper` COM API, with robust fallback mechanisms.
+- **System Tray Integration** — Minimizes perfectly to the system tray, running unobtrusively in the background without cluttering the taskbar.
 
 ---
 
 ## Screenshots
-
 ### Interface
 ![Interface](Images/interface.png)
 
@@ -37,6 +33,23 @@ WallArt runs quietly in the background and updates your desktop wallpaper on a c
 
 ### Museum Selection
 ![Museum Section](Images/choose.png)
+
+### System Tray
+![System Tray](Images/systemtray.png)
+
+## Architecture
+
+WallArt follows the **MVVM (Model-View-ViewModel)** architectural pattern to ensure a clean separation of concerns and maintainability.
+
+- **Models**: Defines the core data structures, such as `ArtworkResult` and application configuration `WallArtConfig`.
+- **Views**: The user interface built with WPF (`MainWindow.xaml`).
+- **ViewModels**: Handles presentation logic and UI state (`MainViewModel`).
+- **Services**: Encapsulates core application logic and external integrations:
+  - **Art Providers**: Implements the `IArtProvider` interface to fetch artworks from various museum APIs.
+  - **Image Processing**: Handles resizing, cropping, and rendering typography onto images (`ImageProcessingService`).
+  - **Wallpaper Manager**: Manages setting the Windows desktop wallpaper (`WallpaperManager`).
+  - **Configuration**: Manages application settings and user preferences (`ConfigurationService`).
+  - **Scheduling**: Orchestrates the automatic fetching and updating of wallpapers at configured intervals (`SmartScheduler`).
 
 ## Requirements
 
@@ -59,38 +72,6 @@ cd WallArt
 dotnet build
 ```
 
-### Packaging the Installer
-
-Requires [Inno Setup 6+](https://jrsoftware.org/isdl.php).
-
-
-## Architecture
-
-```
-WallArt/
-├── App.xaml.cs                   # DI container, tray icon, and startup logic
-├── MainWindow.xaml               # UI components (Now Playing, History, Settings, Log)
-├── Models/
-│   ├── WallArtConfig.cs          # Application configuration model
-│   └── ArtworkResult.cs          # Artwork metadata and source information
-├── Services/
-│   ├── ConfigurationService.cs   # JSON-based configuration management
-│   ├── WallpaperManager.cs       # Wallpaper application and cache management
-│   ├── ImageProcessingService.cs # Image transformations and typography rendering
-│   ├── LogService.cs             # Application event logging
-│   └── Providers/
-│       ├── IArtProvider.cs                    # Abstract provider interface
-│       ├── ArtProviderOrchestrator.cs         # Provider selection and retry logic
-│       ├── ArtInstituteOfChicagoProvider.cs
-│       ├── MetropolitanMuseumOfArtProvider.cs
-│       ├── ClevelandMuseumOfArtProvider.cs
-│       └── VictoriaAndAlbertMuseumProvider.cs
-└── ViewModels/
-    └── MainViewModel.cs          # UI logic and reactive state management
-```
-
----
-
 ## Uninstallation
 
 Use **Add or Remove Programs** or run the following command from the application directory:
@@ -101,26 +82,9 @@ WallArt.exe --uninstall
 
 This removes the autostart registration and local configuration. You will be prompted to either keep or delete the image cache.
 
----
-
-## Dependencies
-
-| Package | Purpose |
-|---|---|
-| [H.NotifyIcon.Wpf](https://github.com/HavenDV/H.NotifyIcon) | System tray integration |
-| [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp) | Core image processing |
-| [SixLabors.ImageSharp.Drawing](https://github.com/SixLabors/ImageSharp.Drawing) | Typography and overlay rendering |
-| [SixLabors.Fonts](https://github.com/SixLabors/Fonts) | Custom font support |
-| Microsoft.Extensions.DependencyInjection | Dependency injection |
-| Microsoft.Extensions.Http | HTTP client management |
-
----
-
 ## Data & Privacy
 
 WallArt interacts exclusively with public museum APIs. No personal data is collected or transmitted. Downloaded images are stored locally in your `Pictures\Wallpaper Art` directory.
-
----
 
 ## License
 
