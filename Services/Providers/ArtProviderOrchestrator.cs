@@ -10,10 +10,14 @@ namespace WallArt.Services.Providers;
 
 public class ArtProviderOrchestrator
 {
+    // Static to avoid re-allocating this array on every wallpaper-change attempt
+    private static readonly string[] _excludeWords =
+        { "vase", "pottery", "ceramic", "vessel", "bowl", "plate", "cup", "dish", "urn", "jar", "pitcher" };
+
     private readonly IEnumerable<IArtProvider> _providers;
     private readonly IConfigurationService _configService;
     private readonly ILogService _logService;
-    private readonly Random _random = new Random();
+
     private readonly HttpClient _httpClient;
 
     public ArtProviderOrchestrator(IEnumerable<IArtProvider> providers, IConfigurationService configService, ILogService logService, HttpClient httpClient)
@@ -36,20 +40,20 @@ public class ArtProviderOrchestrator
                 return (null, null);
             }
 
-            var isPreferred = _random.Next(100) < 80;
+            var isPreferred = Random.Shared.Next(100) < 80;
             List<IArtProvider> shuffledProviders;
             
             if (isPreferred)
             {
                 var preferred = activeProviders.Where(p => p.ProviderName.Contains("Chicago") || p.ProviderName.Contains("Metropolitan"))
-                                          .OrderBy(x => _random.Next()).ToList();
+                                          .OrderBy(_ => Random.Shared.Next()).ToList();
                 var others = activeProviders.Where(p => !p.ProviderName.Contains("Chicago") && !p.ProviderName.Contains("Metropolitan"))
-                                       .OrderBy(x => _random.Next()).ToList();
+                                       .OrderBy(_ => Random.Shared.Next()).ToList();
                 shuffledProviders = preferred.Concat(others).ToList();
             }
             else
             {
-                shuffledProviders = activeProviders.OrderBy(x => _random.Next()).ToList();
+                shuffledProviders = activeProviders.OrderBy(_ => Random.Shared.Next()).ToList();
             }
 
             foreach (var provider in shuffledProviders)
@@ -64,8 +68,7 @@ public class ArtProviderOrchestrator
                         
                         var titleLower = artwork.Title.ToLower();
                         var mediumLower = artwork.Medium.ToLower();
-                        var excludeWords = new[] { "vase", "pottery", "ceramic", "vessel", "bowl", "plate", "cup", "dish", "urn", "jar", "pitcher" };
-                        if (excludeWords.Any(w => titleLower.Contains(w) || mediumLower.Contains(w)))
+                        if (_excludeWords.Any(w => titleLower.Contains(w) || mediumLower.Contains(w)))
                         {
                             throw new Exception($"Skipping non-fine-art object '{artwork.Title}' ({artwork.Medium}).");
                         }
@@ -77,9 +80,6 @@ public class ArtProviderOrchestrator
                         }
 
                     _logService.Log($"[{provider.ProviderName}] Selected: {artwork.Title} by {artwork.Artist}");
-                    
-                    _logService.Log($"[{provider.ProviderName}] Downloading image...");
-                    
                     byte[] bytes;
                     if (artwork.ImageUrl.Contains("artic.edu"))
                     {

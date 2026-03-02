@@ -35,7 +35,16 @@ public partial class App : System.Windows.Application
     {
         this.DispatcherUnhandledException += (s, e) =>
         {
-            System.IO.File.WriteAllText("crash_log.txt", e.Exception.ToString());
+            try
+            {
+                var appData = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WallArt");
+                System.IO.Directory.CreateDirectory(appData);
+                System.IO.File.WriteAllText(
+                    System.IO.Path.Combine(appData, "crash_log.txt"),
+                    e.Exception.ToString());
+            }
+            catch { /* best-effort */ }
             e.Handled = true;
         };
 
@@ -51,8 +60,9 @@ public partial class App : System.Windows.Application
 
         services.AddHttpClient("Default", client =>
         {
+            // Standard Chrome UA — avoids the "custom product token" sandbox heuristic
             client.DefaultRequestHeaders.UserAgent.ParseAdd(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WallArt/1.0");
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36");
             // Hard 30-second timeout — prevents a slow server from hanging the app
             client.Timeout = TimeSpan.FromSeconds(30);
             // 50 MB cap — prevents memory exhaustion from a malicious oversized response

@@ -11,7 +11,7 @@ using WallArt.Services.Providers;
 
 namespace WallArt.ViewModels;
 
-public class MainViewModel : ViewModelBase
+public class MainViewModel : ViewModelBase, IDisposable
 {
     private readonly IConfigurationService _configService;
     private readonly ILogService _logService;
@@ -30,17 +30,19 @@ public class MainViewModel : ViewModelBase
         set { _isUpdating = value; OnPropertyChanged(); }
     }
 
-    private bool _isPaused;
     public bool IsPaused
     {
-        get => _isPaused;
+        get => _configService.Current.IsPaused;
         set 
         { 
-            _isPaused = value; 
-            OnPropertyChanged();
-            if (_isPaused) _scheduler.Stop();
-            else _scheduler.Start();
-            _logService.Log(value ? "Background fetching paused." : "Background fetching resumed.");
+            if (_configService.Current.IsPaused != value)
+            {
+                _configService.Update(c => c.IsPaused = value);
+                OnPropertyChanged();
+                if (value) _scheduler.Stop();
+                else _scheduler.Start();
+                _logService.Log(value ? "Background fetching paused." : "Background fetching resumed.");
+            }
         }
     }
 
@@ -201,11 +203,14 @@ public class MainViewModel : ViewModelBase
             _logService.Log($"⚠ {warning}");
 
         _scheduler = new SmartScheduler(UpdateWallpaperAsync, TimeSpan.FromMinutes(UpdateInterval), _logService);
-        _scheduler.Start();
+        if (!IsPaused)
+        {
+            _scheduler.Start();
+        }
         
         // On boot check if we are overdue 
         var sinceLastUpdate = DateTime.Now - _configService.Current.LastUpdateTime;
-        if (sinceLastUpdate.TotalMinutes >= UpdateInterval)
+        if (sinceLastUpdate.TotalMinutes >= UpdateInterval && !IsPaused)
         {
             _logService.Log("App launched and interval has already expired. Fetching immediately...");
             _ = UpdateWallpaperAsync();
@@ -271,5 +276,13 @@ public class MainViewModel : ViewModelBase
         {
             IsUpdating = false;
         }
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _scheduler?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

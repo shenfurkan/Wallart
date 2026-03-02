@@ -11,7 +11,7 @@ public class ArtInstituteOfChicagoProvider : IArtProvider
 {
     private readonly ILogService _logService;
     private readonly HttpClient _httpClient;
-    private readonly Random _random = new Random();
+
 
     public string ProviderName => "Art Institute of Chicago";
 
@@ -33,7 +33,7 @@ public class ArtInstituteOfChicagoProvider : IArtProvider
             attempts++;
             try
             {
-                var page = _random.Next(1, 100);
+                var page = Random.Shared.Next(1, 100);
                 var url = $"https://api.artic.edu/api/v1/artworks/search?q=painting&limit=40&fields=title,image_id,thumbnail,artist_title,is_public_domain,artwork_type_title&page={page}";
 
                 _logService.Log($"[{ProviderName}] Fetching artwork list...");
@@ -53,7 +53,8 @@ public class ArtInstituteOfChicagoProvider : IArtProvider
                 
                 if (doc.RootElement.TryGetProperty("error", out var errProp))
                 {
-                   throw new Exception($"API Error: {errProp.ToString().Substring(0, Math.Min(errProp.ToString().Length, 150))}");
+                   var errText = errProp.GetRawText();
+                   throw new Exception($"API Error: {(errText.Length > 150 ? errText[..150] : errText)}");
                 }
                 
                 var data = doc.RootElement.GetProperty("data");
@@ -64,7 +65,7 @@ public class ArtInstituteOfChicagoProvider : IArtProvider
                     continue;
                 }
 
-                var indices = System.Linq.Enumerable.Range(0, count).OrderBy(x => _random.Next()).ToList();
+                var indices = System.Linq.Enumerable.Range(0, count).OrderBy(x => Random.Shared.Next()).ToList();
                 
                 foreach (var i in indices)
                 {

@@ -12,7 +12,7 @@ public class VictoriaAndAlbertMuseumProvider : IArtProvider
 {
     private readonly HttpClient _httpClient;
     private readonly ILogService _logService;
-    private readonly Random _random = new Random();
+
 
     public string ProviderName => "Victoria and Albert Museum";
 
@@ -25,7 +25,7 @@ public class VictoriaAndAlbertMuseumProvider : IArtProvider
     public async Task<ArtworkResult> FetchHorizontalArtworkAsync(CancellationToken cancellationToken = default)
     {
         _logService.Log($"[{ProviderName}] Fetching artworks...");
-        var page = _random.Next(1, 30);
+        var page = Random.Shared.Next(1, 30);
         var url = $"https://api.vam.ac.uk/v2/objects/search?images_exist=1&material=painting&page_size=100&page={page}";
         var response = await _httpClient.GetAsync(url, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -37,7 +37,7 @@ public class VictoriaAndAlbertMuseumProvider : IArtProvider
         if (count == 0)
             throw new Exception("No artworks found.");
 
-        var record = records[_random.Next(count)];
+        var record = records[Random.Shared.Next(count)];
         var id = record.GetProperty("systemNumber").GetString() ?? "";
         
         var title = record.TryGetProperty("_primaryTitle", out var t) ? t.GetString() ?? "Unknown" : "Unknown";

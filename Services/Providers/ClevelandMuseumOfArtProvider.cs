@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using WallArt.Models;
+using WallArt.Services;
 
 namespace WallArt.Services.Providers;
 
@@ -11,7 +12,7 @@ public class ClevelandMuseumOfArtProvider : IArtProvider
 {
     private readonly HttpClient _httpClient;
     private readonly ILogService _logService;
-    private readonly Random _random = new Random();
+
 
     public string ProviderName => "Cleveland Museum of Art";
 
@@ -24,14 +25,8 @@ public class ClevelandMuseumOfArtProvider : IArtProvider
     public async Task<ArtworkResult> FetchHorizontalArtworkAsync(CancellationToken cancellationToken = default)
     {
         _logService.Log($"[{ProviderName}] Fetching artworks...");
-        var countUrl = "https://openaccess-api.clevelandart.org/api/artworks/?has_image=1&type=Painting&limit=1";
-        var countResponse = await _httpClient.GetAsync(countUrl, cancellationToken);
-        countResponse.EnsureSuccessStatusCode();
-        var countJson = await countResponse.Content.ReadAsStringAsync(cancellationToken);
-        using var countDoc = JsonDocument.Parse(countJson);
-        var total = countDoc.RootElement.GetProperty("info").GetProperty("total").GetInt32();
-        
-        var skip = _random.Next(Math.Min(total, 5000));
+        // Skip the count pre-flight — cap offset at 5000 (well within available records).
+        var skip = Random.Shared.Next(5000);
 
         var url = $"https://openaccess-api.clevelandart.org/api/artworks/?has_image=1&type=Painting&limit=1&skip={skip}";
         var response = await _httpClient.GetAsync(url, cancellationToken);
@@ -67,6 +62,8 @@ public class ClevelandMuseumOfArtProvider : IArtProvider
         
         if (string.IsNullOrEmpty(imageUrl))
             throw new Exception("No suitable image found.");
+
+        SecurityHelper.RequireHttps(imageUrl);
 
         return new ArtworkResult
         {

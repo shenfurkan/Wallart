@@ -18,27 +18,17 @@ public class LogService : ILogService
     public void Log(string message)
     {
         var formattedMessage = $"[{DateTime.Now:HH:mm:ss}] {message}";
-        
         var dispatcher = Application.Current?.Dispatcher;
-        if (dispatcher != null && !dispatcher.CheckAccess())
-        {
-            dispatcher.BeginInvoke(() => Logs.Add(formattedMessage));
-        }
-        else
+
+        void AddAndTrim()
         {
             Logs.Add(formattedMessage);
-        }
-        
-        var d = Application.Current?.Dispatcher;
-        if (d != null && !d.CheckAccess())
-        {
-            d.BeginInvoke(() => {
-                while (Logs.Count > 100) Logs.RemoveAt(0);
-            });
-        }
-        else
-        {
             while (Logs.Count > 100) Logs.RemoveAt(0);
         }
+
+        if (dispatcher != null && !dispatcher.CheckAccess())
+            dispatcher.BeginInvoke(AddAndTrim);
+        else
+            AddAndTrim();
     }
 }

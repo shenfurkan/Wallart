@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using WallArt.Models;
+using WallArt.Services;
 
 namespace WallArt.Services.Providers;
 
@@ -11,7 +12,7 @@ public class MetropolitanMuseumOfArtProvider : IArtProvider
 {
     private readonly HttpClient _httpClient;
     private readonly ILogService _logService;
-    private readonly Random _random = new Random();
+
 
     public string ProviderName => "Metropolitan Museum of Art";
 
@@ -35,7 +36,7 @@ public class MetropolitanMuseumOfArtProvider : IArtProvider
         if (count == 0)
             throw new Exception("No artworks found.");
 
-        var selectedId = objectIds[_random.Next(count)].GetInt32();
+        var selectedId = objectIds[Random.Shared.Next(count)].GetInt32();
         
         var objectUrl = $"https://collectionapi.metmuseum.org/public/collection/v1/objects/{selectedId}";
         var objectResponse = await _httpClient.GetAsync(objectUrl, cancellationToken);
@@ -51,6 +52,8 @@ public class MetropolitanMuseumOfArtProvider : IArtProvider
             
         if (string.IsNullOrEmpty(imageUrl))
             throw new Exception("No image found.");
+
+        SecurityHelper.RequireHttps(imageUrl);
 
         return new ArtworkResult
         {

@@ -10,6 +10,7 @@ public class WallArtConfig
     public DateTime LastUpdateTime { get; set; } = DateTime.MinValue;
     public bool AutostartEnabled { get; set; } = true;
     public int CacheBounds { get; set; } = 50;
+    public bool IsPaused { get; set; } = false;
     public ArtworkResult? ActiveArtwork { get; set; }
 
     public List<string> BlacklistedArtworkIds { get; set; } = new();

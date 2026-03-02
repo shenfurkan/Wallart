@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Drawing.Processing;
@@ -13,6 +14,9 @@ namespace WallArt.Services;
 
 public class ImageProcessingService : IImageProcessingService
 {
+    // Cached encoder: quality 90 for sharp 4K wallpapers; static to avoid per-call allocation
+    private static readonly JpegEncoder _jpegEncoder = new JpegEncoder { Quality = 90 };
+
     private readonly string _cacheDirectory;
     private readonly ILogService _logService;
     private readonly SixLabors.Fonts.FontFamily _fontFamily;
@@ -47,7 +51,7 @@ public class ImageProcessingService : IImageProcessingService
             else
             {
                 // Last resort fallback
-                _fontFamily = SystemFonts.Families.GetEnumerator().MoveNext() ? SystemFonts.Families.GetEnumerator().Current : default;
+                _fontFamily = SystemFonts.Families.FirstOrDefault();
             }
         }
     }
@@ -93,7 +97,7 @@ public class ImageProcessingService : IImageProcessingService
         // Verify the resolved path stays within the cache directory
         var path = SecurityHelper.EnsurePathIsWithin(Path.Combine(_cacheDirectory, filename), _cacheDirectory);
         
-        await image.SaveAsJpegAsync(path, cancellationToken);
+        await image.SaveAsJpegAsync(path, _jpegEncoder, cancellationToken);
         _logService.Log($"Image saved to cache: {filename}");
         
         return path;

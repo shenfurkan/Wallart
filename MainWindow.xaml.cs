@@ -65,7 +65,10 @@ public partial class MainWindow : Window
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
-        ShrinkToTray();
+        IsExplicitClose = true;
+        _notifyIcon!.Visible = false;
+        _notifyIcon.Dispose();
+        Application.Current.Shutdown();
     }
     
     private void ShrinkToTray()

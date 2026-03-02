@@ -16,7 +16,7 @@ public class SmartScheduler : IDisposable
     
     // Internal trackers
     private DateTime _nextRunTime;
-    private bool _isRunning;
+    private int _started; // 0 = not started, 1 = started (Interlocked)
     private Task? _schedulerTask;
 
     public SmartScheduler(Func<Task> action, TimeSpan interval, ILogService logService)
@@ -31,8 +31,8 @@ public class SmartScheduler : IDisposable
 
     public void Start()
     {
-        if (_isRunning) return;
-        _isRunning = true;
+        // Only allow one start; harmless if called again
+        if (Interlocked.CompareExchange(ref _started, 1, 0) != 0) return;
         _nextRunTime = DateTime.Now.Add(_interval);
 
         _schedulerTask = Task.Run(RunLoopAsync, _cts.Token);
@@ -41,8 +41,6 @@ public class SmartScheduler : IDisposable
     
     public void Stop()
     {
-        if (!_isRunning) return;
-        _isRunning = false;
         _cts.Cancel();
     }
     
@@ -62,34 +60,34 @@ public class SmartScheduler : IDisposable
 
     private async Task RunLoopAsync()
     {
-        while (!_cts.Token.IsCancellationRequested && _isRunning)
+        while (!_cts.Token.IsCancellationRequested)
         {
             var now = DateTime.Now;
 
-            // Did we pass the target time?
             if (now >= _nextRunTime)
             {
                 _logService.Log("Scheduled time reached. Executing...");
-                
-                // CRITICAL: Push the NEXT run time forward immediately BEFORE executing. 
-                // This prevents a long-running execution from causing an immediate "catch-up" double-fire.
+                // Push next run time BEFORE executing to prevent double-fire on slow execution.
                 _nextRunTime = now.Add(_interval);
-                
-                try 
+                try
                 {
                     await _action();
-                } 
-                catch (Exception ex) 
+                }
+                catch (Exception ex)
                 {
                     _logService.Log($"Background execution failed: {ex.Message}");
                 }
             }
 
-            // Sleep locally to prevent CPU burn, but check relatively often (e.g. 10s) 
-            // incase SystemEvents missed a wakeup or the time was manually adjusted.
+            // Sleep until next run (or at most 1 minute) so we don't burn CPU on a 10 s poll.
+            // Capping at 1 min keeps us responsive to UpdateInterval changes via UpdateInterval().
+            var timeUntilNext = _nextRunTime - DateTime.Now;
+            var sleepDuration = timeUntilNext > TimeSpan.Zero
+                ? TimeSpan.FromTicks(Math.Min(timeUntilNext.Ticks, TimeSpan.FromMinutes(1).Ticks))
+                : TimeSpan.FromSeconds(5);
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(10), _cts.Token);
+                await Task.Delay(sleepDuration, _cts.Token);
             }
             catch (TaskCanceledException) { break; }
         }
@@ -112,7 +110,7 @@ public class SmartScheduler : IDisposable
     private void EvaluateMisfire()
     {
         var now = DateTime.Now;
-        if (now >= _nextRunTime && _isRunning)
+        if (now >= _nextRunTime && !_cts.IsCancellationRequested)
         {
             _logService.Log($"Detected a missed interval during sleep/downtime. Target was {_nextRunTime:HH:mm:ss}. Firing precisely once to catch up, and adjusting future schedule.");
             
