@@ -27,14 +27,11 @@ WallArt runs quietly in the background and updates your desktop wallpaper on a c
 ---
 
 ## Screenshots
-### Interface
-![Interface](Images/interface.png)
+### Preferences
+![Preferences](Images/preferences.png)
 
 ### Example Wallpaper
 ![Example Wallpaper](Images/wallpaper.png)
-
-### Museum Selection
-![Museum Section](Images/choose.png)
 
 ### System Tray
 ![System Tray](Images/systemtray.png)
@@ -49,9 +46,7 @@ WallArt follows the **MVVM (Model-View-ViewModel)** architectural pattern to ens
 - **Services**: Encapsulates core application logic and external integrations:
   - **Art Providers**: Implements the `IArtProvider` interface to fetch artworks from various museum APIs.
   - **Image Processing**: Handles resizing, cropping, and rendering typography onto images (`ImageProcessingService`).
-  - **Wallpaper Manager**: Manages setting the Windows desktop wallpaper (`WallpaperManager`).
-  - **Configuration**: Manages application settings and user preferences (`ConfigurationService`).
-  - **Scheduling**: Orchestrates the automatic fetching and updating of wallpapers at configured intervals (`SmartScheduler`).
+  - **Configuration**: Manages application settings and user preferences (`ConfigurationService`)
 
 ## Requirements
 
