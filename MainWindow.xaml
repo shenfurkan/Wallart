@@ -261,7 +261,7 @@
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate>
                                                 <TextBlock Text="{Binding Converter={StaticResource TextPositionConverter}}"
-                                                           FontFamily="Segoe UI" FontSize="13" Foreground="#EFEFEF"/>
+                                                           FontFamily="Segoe UI" FontSize="13" Foreground="#1A1A1A"/>
                                             </DataTemplate>
                                         </ComboBox.ItemTemplate>
                                     </ComboBox>
