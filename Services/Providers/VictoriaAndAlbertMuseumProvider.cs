@@ -38,29 +38,49 @@ public class VictoriaAndAlbertMuseumProvider : IArtProvider
             throw new Exception("No artworks found.");
 
         var record = records[Random.Shared.Next(count)];
-        var id = record.GetProperty("systemNumber").GetString() ?? "";
-        
-        var title = record.TryGetProperty("_primaryTitle", out var t) ? t.GetString() ?? "Unknown" : "Unknown";
-        var artist = record.TryGetProperty("_primaryMaker", out var m) && m.TryGetProperty("name", out var n) ? n.GetString() ?? "Unknown" : "Unknown";
-        var date = record.TryGetProperty("_primaryDate", out var d) ? d.GetString() ?? "" : "";
-        var rawImageId = record.GetProperty("_images").TryGetProperty("_primary_thumbnail", out var th) ? th.GetString() : null;
-        
-        if (string.IsNullOrEmpty(rawImageId))
+
+        // Fix 3: Use systemNumber as the file-safe ID (alphanumeric by definition)
+        var id = SecurityHelper.SanitizeId(record.GetProperty("systemNumber").GetString());
+
+        var title  = record.TryGetProperty("_primaryTitle",  out var t) ? t.GetString() ?? "Unknown" : "Unknown";
+        var artist = record.TryGetProperty("_primaryMaker",  out var m) &&
+                     m.TryGetProperty("name", out var n)               ? n.GetString() ?? "Unknown" : "Unknown";
+        var date   = record.TryGetProperty("_primaryDate",   out var d) ? d.GetString() ?? "" : "";
+
+        // Fix 3: _primary_thumbnail is a URL path fragment containing '/' — do NOT sanitize it as an ID.
+        // Instead retrieve it raw, upgrade the size qualifier to full/max, and validate with RequireHttps.
+        string? imageUrl = null;
+        if (record.TryGetProperty("_images", out var imgs) &&
+            imgs.TryGetProperty("_primary_thumbnail", out var thumb))
+        {
+            var raw = thumb.GetString();
+            if (!string.IsNullOrEmpty(raw))
+            {
+                // The thumbnail URL returned by the API is already HTTPS and full.
+                // Replace the small thumbnail size segment with the full-resolution equivalent.
+                imageUrl = raw
+                    .Replace("/!100,100/", "/full/max/")
+                    .Replace("/!200,200/", "/full/max/");
+
+                // If the field is just a path fragment (no scheme), prepend the CDN base.
+                if (!imageUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                    imageUrl = "https://framemark.vam.ac.uk/collections/" + imageUrl.TrimStart('/');
+            }
+        }
+
+        if (string.IsNullOrEmpty(imageUrl))
             throw new Exception("No suitable image found.");
 
-        // Sanitize the API-provided image identifier before embedding in a URL
-        var imageId = SecurityHelper.SanitizeId(rawImageId);
-        var imageUrl = $"https://framemark.vam.ac.uk/collections/{imageId}/full/max/0/default.jpg";
         SecurityHelper.RequireHttps(imageUrl);
 
         return new ArtworkResult
         {
-            Id = id,
-            Title = title,
-            Artist = artist,
-            Date = date,
-            Medium = "Painting",
-            ImageUrl = imageUrl,
+            Id         = id,
+            Title      = title,
+            Artist     = artist,
+            Date       = date,
+            Medium     = "Painting",
+            ImageUrl   = imageUrl,
             ProviderName = ProviderName
         };
     }

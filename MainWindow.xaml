@@ -1,12 +1,14 @@
-﻿<Window x:Class="WallArt.MainWindow"
+<Window x:Class="WallArt.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:tb="http://www.hardcodet.net/taskbar"
+        xmlns:local="clr-namespace:WallArt"
         Title="WallArt" Height="560" Width="540" 
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="CanResizeWithGrip" WindowStartupLocation="CenterScreen"
         Foreground="#EEEEEE" Icon="pack://application:,,,/Wallart.ico">
     <Window.Resources>
+        <local:TextOverlayPositionConverter x:Key="TextPositionConverter"/>
         <SolidColorBrush x:Key="BgBrush" Color="#1A1A1A"/>
         <SolidColorBrush x:Key="PanelBrush" Color="#252525"/>
         <SolidColorBrush x:Key="AccentBrush" Color="#F0EAD6"/>
@@ -204,40 +206,6 @@
                             </StackPanel>
                             <TextBlock Text="Curated public domain artworks fetched directly from premium museum collections." FontSize="13" FontFamily="Segoe UI" Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,0,0,24"/>
                             
-                            <!-- Update Interval -->
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0">
-                                    <TextBlock Text="UPDATE INTERVAL" FontSize="11" FontWeight="Bold" FontFamily="Segoe UI" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,4"/>
-                                    <StackPanel Orientation="Horizontal">
-                                        <ComboBox ItemsSource="{Binding AvailableIntervals}" SelectedItem="{Binding UpdateInterval}" Width="70" Height="28" Padding="6,4" Background="#111" Foreground="#111" BorderBrush="{StaticResource BorderBrush}"/>
-                                        <TextBlock Text="min" VerticalAlignment="Center" FontFamily="Segoe UI" Margin="8,0,0,0" Foreground="{StaticResource MutedTextBrush}"/>
-                                    </StackPanel>
-                                </StackPanel>
-                                
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Right">
-                                    <Button Command="{Binding TogglePauseCommand}" Margin="0,0,8,0">
-                                        <Button.Style>
-                                            <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-                                                <Setter Property="Content" Value="Pause"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsPaused}" Value="True">
-                                                        <Setter Property="Content" Value="Resume"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Button.Style>
-                                    </Button>
-                                    <Button Content="Clear Cache" Command="{Binding ClearCacheCommand}" Style="{StaticResource SecondaryButton}"/>
-                                </StackPanel>
-                            </Grid>
-                            
                             <!-- Manual Update Row -->
                             <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                                 <Button Content="Change Wallpaper Now" Command="{Binding ForceUpdateCommand}" Style="{StaticResource PrimaryButton}" ToolTip="Fetch a new artwork immediately" Margin="0,0,8,0"/>
@@ -249,16 +217,55 @@
                             </StackPanel>
                                 </StackPanel>
                             </TabItem>
-                            
-                            <!-- Museum Providers Tab -->
-                            <TabItem Header="Museums">
+
+                            <!-- Preferences Tab -->
+                            <TabItem Header="Preferences">
                                 <StackPanel Margin="0,16,0,0">
-                                    <TextBlock Text="Select which museum collections to fetch artwork from:" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,16"/>
-                                    
-                                    <CheckBox Content="Art Institute of Chicago" IsChecked="{Binding UseArtInstituteOfChicago}" Foreground="{StaticResource TextBrush}" Margin="0,0,0,8"/>
-                                    <CheckBox Content="Cleveland Museum of Art" IsChecked="{Binding UseClevelandMuseum}" Foreground="{StaticResource TextBrush}" Margin="0,0,0,8"/>
-                                    <CheckBox Content="Metropolitan Museum of Art" IsChecked="{Binding UseMetropolitanMuseum}" Foreground="{StaticResource TextBrush}" Margin="0,0,0,8"/>
-                                    <CheckBox Content="Victoria and Albert Museum" IsChecked="{Binding UseVictoriaAndAlbert}" Foreground="{StaticResource TextBrush}" Margin="0,0,0,8"/>
+
+                                    <!-- Scheduling -->
+                                    <TextBlock Text="SCHEDULING" FontSize="11" FontWeight="Bold" FontFamily="Segoe UI"
+                                               Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,8"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <ComboBox ItemsSource="{Binding AvailableIntervals}" SelectedItem="{Binding UpdateInterval}"
+                                                  Width="70" Height="28" Padding="6,4"
+                                                  Background="#111" Foreground="#111" BorderBrush="{StaticResource BorderBrush}"/>
+                                        <TextBlock Text="min update interval" VerticalAlignment="Center"
+                                                   FontFamily="Segoe UI" Margin="8,0,0,0" Foreground="{StaticResource MutedTextBrush}"/>
+                                    </StackPanel>
+
+                                    <!-- Museum Collections -->
+                                    <TextBlock Text="MUSEUM COLLECTIONS" FontSize="11" FontWeight="Bold" FontFamily="Segoe UI"
+                                               Foreground="{StaticResource MutedTextBrush}" Margin="0,12,0,10"/>
+                                    <CheckBox Content="Art Institute of Chicago"     IsChecked="{Binding UseArtInstituteOfChicago}" Foreground="{StaticResource TextBrush}" Margin="0,0,0,8"/>
+                                    <CheckBox Content="Cleveland Museum of Art"      IsChecked="{Binding UseClevelandMuseum}"       Foreground="{StaticResource TextBrush}" Margin="0,0,0,8"/>
+                                    <CheckBox Content="Metropolitan Museum of Art"   IsChecked="{Binding UseMetropolitanMuseum}"    Foreground="{StaticResource TextBrush}" Margin="0,0,0,8"/>
+                                    <CheckBox Content="Victoria and Albert Museum"   IsChecked="{Binding UseVictoriaAndAlbert}"     Foreground="{StaticResource TextBrush}" Margin="0,0,0,20"/>
+
+                                    <!-- Image Options -->
+                                    <TextBlock Text="IMAGE OPTIONS" FontSize="11" FontWeight="Bold" FontFamily="Segoe UI"
+                                               Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,10"/>
+                                    <CheckBox Content="Show artwork info on wallpaper"
+                                              IsChecked="{Binding ShowTextOverlay}"
+                                              Foreground="{StaticResource TextBrush}" Margin="0,0,0,8"/>
+                                    <CheckBox Content="Prefer horizontal images"
+                                              IsChecked="{Binding PreferHorizontalImages}"
+                                              Foreground="{StaticResource TextBrush}" Margin="0,0,0,12"/>
+                                    <TextBlock Text="TEXT POSITION" FontSize="11" FontWeight="Bold" FontFamily="Segoe UI"
+                                               Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,6"/>
+                                    <ComboBox ItemsSource="{Binding AvailableTextPositions}"
+                                              SelectedItem="{Binding TextPosition}"
+                                              Width="180" Height="28" Padding="6,4"
+                                              HorizontalAlignment="Left"
+                                              Background="#111" Foreground="#111"
+                                              BorderBrush="{StaticResource BorderBrush}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={StaticResource TextPositionConverter}}"
+                                                           FontFamily="Segoe UI" FontSize="13" Foreground="#EFEFEF"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
                                 </StackPanel>
                             </TabItem>
                             

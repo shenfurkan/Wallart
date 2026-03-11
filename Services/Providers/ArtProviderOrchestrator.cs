@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using SixLabors.ImageSharp;
 using WallArt.Models;
 
 namespace WallArt.Services.Providers;
@@ -91,6 +93,10 @@ public class ArtProviderOrchestrator
                         request.Headers.TryAddWithoutValidation("Referer", "https://www.artic.edu/");
                         var response = await _httpClient.SendAsync(request, cancellationToken);
                         response.EnsureSuccessStatusCode();
+                        // Fix 6: Reject non-image responses before they reach the image decoder
+                        var ct = response.Content.Headers.ContentType?.MediaType ?? "";
+                        if (!ct.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                            throw new Exception($"Unexpected Content-Type '{ct}' — expected an image.");
                         bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
                         _logService.Log($"[{provider.ProviderName}] Downloaded {bytes.Length / 1024}KB");
                     }
@@ -98,9 +104,25 @@ public class ArtProviderOrchestrator
                     {
                         var response = await _httpClient.GetAsync(artwork.ImageUrl, cancellationToken);
                         response.EnsureSuccessStatusCode();
+                        // Fix 6: Reject non-image responses before they reach the image decoder
+                        var ct = response.Content.Headers.ContentType?.MediaType ?? "";
+                        if (!ct.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                            throw new Exception($"Unexpected Content-Type '{ct}' — expected an image.");
                         bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
                     }
-                    
+
+                    // Orientation check — header-only decode, does not load full image into memory
+                    if (_configService.Current.PreferHorizontalImages)
+                    {
+                        using var ms = new MemoryStream(bytes);
+                        var info = Image.Identify(ms);
+                        if (info != null && info.Width < info.Height)
+                        {
+                            throw new Exception(
+                                $"Skipping portrait image {info.Width}×{info.Height} — retrying.");
+                        }
+                    }
+
                     return (artwork, bytes);
                 }
                 catch (Exception ex)

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SixLabors.ImageSharp;
@@ -56,10 +57,16 @@ public class ImageProcessingService : IImageProcessingService
         }
     }
 
-    public async Task<string> ProcessAndSaveArtworkAsync(byte[] imageBytes, ArtworkResult metadata, CancellationToken cancellationToken = default)
+    public async Task<string> ProcessAndSaveArtworkAsync(byte[] imageBytes, ArtworkResult metadata, CancellationToken cancellationToken = default, bool showText = true)
     {
         _logService.Log("Processing image...");
         using var image = SixLabors.ImageSharp.Image.Load(imageBytes);
+
+        // Fix 1: Decompression bomb guard — reject images whose pixel area exceeds 2× 4K
+        const long MaxPixels = (long)3840 * 2160 * 2;
+        if ((long)image.Width * image.Height > MaxPixels)
+            throw new InvalidOperationException(
+                $"Security: image dimensions {image.Width}×{image.Height} exceed safe limit.");
 
         var targetWidth = 3840;
         var targetHeight = 2160;
@@ -90,7 +97,8 @@ public class ImageProcessingService : IImageProcessingService
 
 
 
-        DrawTypography(image, metadata);
+        if (showText)
+            DrawTypography(image, metadata);
 
         var safeId = SecurityHelper.SanitizeId(metadata.Id);
         var filename = $"{DateTime.Now:yyyyMMdd_HHmmss}_{safeId}.jpg";
@@ -103,29 +111,57 @@ public class ImageProcessingService : IImageProcessingService
         return path;
     }
 
+    // Fix 7: Strip control characters and Unicode bidi/RTL overrides from API-sourced strings
+    private static string SanitizeDisplayText(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+        // Remove C0/C1 controls and known bidirectional override codepoints
+        var cleaned = new string(input.Where(c =>
+            !char.IsControl(c) &&
+            c != '\u200B' && c != '\u202A' && c != '\u202B' &&
+            c != '\u202C' && c != '\u202D' && c != '\u202E' &&
+            c != '\u2066' && c != '\u2067' && c != '\u2069').ToArray());
+        return cleaned.Length > 200 ? cleaned[..200] : cleaned;
+    }
+
     private void DrawTypography(SixLabors.ImageSharp.Image image, ArtworkResult metadata)
     {
-        var paddingX = image.Width * 0.03f;
+        var paddingX = image.Width  * 0.03f;
         var paddingY = image.Height * 0.03f;
         var maxTextWidth = (image.Width * 0.55f) - paddingX;
-        
-        var text = $"{metadata.Title}\n{metadata.Artist}\n{metadata.ProviderName}";
+
+        var text = $"{SanitizeDisplayText(metadata.Title)}\n" +
+                   $"{SanitizeDisplayText(metadata.Artist)}\n" +
+                   $"{SanitizeDisplayText(metadata.ProviderName)}";
         float fontSize = image.Width * 0.02f;
         Font font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
-        
-        PointF origin = new PointF(image.Width - paddingX, paddingY);
+
+        var position = _configService.Current.TextPosition;
+
+        // Derive corner geometry from the chosen position
+        bool isRight  = position == WallArt.Models.TextOverlayPosition.TopRight  ||
+                        position == WallArt.Models.TextOverlayPosition.BottomRight;
+        bool isBottom = position == WallArt.Models.TextOverlayPosition.BottomLeft ||
+                        position == WallArt.Models.TextOverlayPosition.BottomRight;
+
+        float originX = isRight  ? image.Width  - paddingX : paddingX;
+        float originY = isBottom ? image.Height - paddingY : paddingY;
+
+        var hAlign    = isRight  ? HorizontalAlignment.Right  : HorizontalAlignment.Left;
+        var vAlign    = isBottom ? VerticalAlignment.Bottom   : VerticalAlignment.Top;
+        var tAlign    = isRight  ? TextAlignment.End          : TextAlignment.Start;
 
         RichTextOptions options = new RichTextOptions(font)
         {
-            Origin = origin,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top,
-            TextAlignment = TextAlignment.End,
-            WrappingLength = maxTextWidth,
-            LineSpacing = 1.2f
+            Origin              = new PointF(originX, originY),
+            HorizontalAlignment = hAlign,
+            VerticalAlignment   = vAlign,
+            TextAlignment       = tAlign,
+            WrappingLength      = maxTextWidth,
+            LineSpacing         = 1.2f
         };
 
-        try 
+        try
         {
             image.Mutate(x => x.DrawText(
                 options,

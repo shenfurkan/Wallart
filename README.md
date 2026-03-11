@@ -21,6 +21,8 @@ WallArt runs quietly in the background and updates your desktop wallpaper on a c
 - **Local Cache Management** — Downloaded images are saved to `Pictures\Wallpaper Art` for offline browsing; includes a configurable cache size limit (default: 50 images).
 - **Windows Autostart** — Simple registry-based integration to launch WallArt silently at login.
 - **System Tray Integration** — Minimizes perfectly to the system tray, running unobtrusively in the background without cluttering the taskbar.
+- **Optional Text Overlay** — Toggle artwork metadata (title, artist, source) on or off directly from the Dashboard. Changes apply to the next wallpaper fetch.
+- **Horizontal Image Priority** — Optionally filter out portrait-oriented artworks so only landscape images are set as your wallpaper. Uses fast header-only image inspection with no perceptible delay.
 
 ---
 

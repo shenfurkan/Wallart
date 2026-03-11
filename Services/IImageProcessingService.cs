@@ -4,5 +4,5 @@ namespace WallArt.Services;
 
 public interface IImageProcessingService
 {
-    Task<string> ProcessAndSaveArtworkAsync(byte[] imageBytes, ArtworkResult metadata, CancellationToken cancellationToken = default);
+    Task<string> ProcessAndSaveArtworkAsync(byte[] imageBytes, ArtworkResult metadata, CancellationToken cancellationToken = default, bool showText = true);
 }

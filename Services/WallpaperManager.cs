@@ -79,6 +79,9 @@ public class WallpaperManager : IWallpaperManager
 
     public void SetWallpaper(string imagePath)
     {
+        // Fix 2: Validate the path is within the cache directory before any Win32 call
+        var validated = SecurityHelper.EnsurePathIsWithin(imagePath, _cacheDirectory);
+
         try
         {
             var desktopWallpaper = (IDesktopWallpaper)new DesktopWallpaperClass();
@@ -87,14 +90,14 @@ public class WallpaperManager : IWallpaperManager
             for (uint i = 0; i < monitorCount; i++)
             {
                 string monitorId = desktopWallpaper.GetMonitorDevicePathAt(i);
-                desktopWallpaper.SetWallpaper(monitorId, imagePath);
+                desktopWallpaper.SetWallpaper(monitorId, validated);
             }
         }
         catch (Exception ex)
         {
             // Fallback to legacy API if COM fails
             Console.WriteLine($"COM IDesktopWallpaper failed, falling back to SystemParametersInfo: {ex.Message}");
-            SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, imagePath, SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE);
+            SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, validated, SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE);
         }
     }
 

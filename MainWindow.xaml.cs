@@ -1,13 +1,26 @@
-﻿using System;
+using System;
 using System.ComponentModel;
+using System.Globalization;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
+using WallArt.Models;
 using WallArt.ViewModels;
 using System.Drawing;
 using System.Windows.Forms;
 using Application = System.Windows.Application;
 
 namespace WallArt;
+
+/// <summary>Maps TextOverlayPosition enum to a human-readable display string for the ComboBox.</summary>
+public class TextOverlayPositionConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is TextOverlayPosition pos ? MainViewModel.GetTextPositionLabel(pos) : value?.ToString() ?? "";
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => DependencyProperty.UnsetValue; // one-way only
+}
 
 public partial class MainWindow : Window
 {

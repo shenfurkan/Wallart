@@ -39,11 +39,20 @@ public class ConfigurationService : IConfigurationService
         if (!File.Exists(_configPath))
             return new WallArtConfig();
 
-        // Use a plain read lock — no nested lock needed here, we are not yet published
         try
         {
+            // Fix 8: Reject oversized config files before reading into memory
+            var fileInfo = new FileInfo(_configPath);
+            if (fileInfo.Length > 5 * 1024 * 1024)
+            {
+                ConfigLoadWarning = "Config file exceeds 5 MB size limit — defaults applied.";
+                return new WallArtConfig();
+            }
+
             var json = File.ReadAllText(_configPath);
-            var config = JsonSerializer.Deserialize<WallArtConfig>(json);
+            // Fix 8: Bounded JSON depth prevents stack exhaustion from crafted configs
+            var opts = new JsonSerializerOptions { MaxDepth = 8 };
+            var config = JsonSerializer.Deserialize<WallArtConfig>(json, opts);
             if (config != null)
             {
                 config.Validate();
@@ -54,8 +63,6 @@ public class ConfigurationService : IConfigurationService
         }
         catch (Exception ex)
         {
-            // Record the warning so MainViewModel can show it via the log,
-            // but do NOT crash: fall through and return a fresh default config.
             ConfigLoadWarning = $"Config could not be loaded ({ex.GetType().Name}: {ex.Message}). Defaults applied.";
         }
 
@@ -67,15 +74,23 @@ public class ConfigurationService : IConfigurationService
         _lock.EnterWriteLock();
         try
         {
+            // Fix 8: Same bounded options used for all (de)serialization
+            var opts = new JsonSerializerOptions { WriteIndented = true, MaxDepth = 8 };
+
             // Deep-clone via JSON round-trip so the update lambda cannot mutate the live instance
-            var json = JsonSerializer.Serialize(_currentConfig);
-            var newConfig = JsonSerializer.Deserialize<WallArtConfig>(json) ?? new WallArtConfig();
+            var json = JsonSerializer.Serialize(_currentConfig, opts);
+            var newConfig = JsonSerializer.Deserialize<WallArtConfig>(json, opts) ?? new WallArtConfig();
 
             updateAction(newConfig);
-            newConfig.Validate();  // clamp any values the caller may have set out of range
+            newConfig.Validate(); // clamp any values the caller may have set out of range
 
-            var newJson = JsonSerializer.Serialize(newConfig, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_configPath, newJson);
+            var newJson = JsonSerializer.Serialize(newConfig, opts);
+
+            // Fix 4: Atomic write — write to .tmp then replace, so a crash mid-write
+            // never leaves a half-written (corrupt) config.json on disk.
+            var tempPath = _configPath + ".tmp";
+            File.WriteAllText(tempPath, newJson);
+            File.Move(tempPath, _configPath, overwrite: true);
 
             _currentConfig = newConfig;
         }

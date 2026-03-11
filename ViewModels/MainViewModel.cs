@@ -91,6 +91,64 @@ public class MainViewModel : ViewModelBase, IDisposable
         set => SetProviderToggle("Victoria and Albert Museum", value);
     }
 
+    public bool ShowTextOverlay
+    {
+        get => _configService.Current.ShowTextOverlay;
+        set
+        {
+            if (_configService.Current.ShowTextOverlay != value)
+            {
+                _configService.Update(c => c.ShowTextOverlay = value);
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public bool PreferHorizontalImages
+    {
+        get => _configService.Current.PreferHorizontalImages;
+        set
+        {
+            if (_configService.Current.PreferHorizontalImages != value)
+            {
+                _configService.Update(c => c.PreferHorizontalImages = value);
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    // All four corners the user can choose from
+    public ObservableCollection<TextOverlayPosition> AvailableTextPositions { get; } =
+        new(new[] {
+            TextOverlayPosition.TopRight,
+            TextOverlayPosition.TopLeft,
+            TextOverlayPosition.BottomRight,
+            TextOverlayPosition.BottomLeft
+        });
+
+    public TextOverlayPosition TextPosition
+    {
+        get => _configService.Current.TextPosition;
+        set
+        {
+            if (_configService.Current.TextPosition != value)
+            {
+                _configService.Update(c => c.TextPosition = value);
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    // Human-readable label shown in the ComboBox
+    public static string GetTextPositionLabel(TextOverlayPosition pos) => pos switch
+    {
+        TextOverlayPosition.TopRight    => "Top Right (default)",
+        TextOverlayPosition.TopLeft     => "Top Left",
+        TextOverlayPosition.BottomRight => "Bottom Right",
+        TextOverlayPosition.BottomLeft  => "Bottom Left",
+        _                               => pos.ToString()
+    };
+
     private bool GetProviderToggle(string name)
     {
         return !_configService.Current.ProviderToggles.TryGetValue(name, out var isEnabled) || isEnabled;
@@ -236,7 +294,7 @@ public class MainViewModel : ViewModelBase, IDisposable
 
             if (metadata != null && bytes != null)
             {
-                var path = await _imageService.ProcessAndSaveArtworkAsync(bytes, metadata, _cts.Token);
+                var path = await _imageService.ProcessAndSaveArtworkAsync(bytes, metadata, _cts.Token, showText: ShowTextOverlay);
                 _wallpaperManager.SetWallpaper(path);
                 
                 ActiveArtwork = metadata;

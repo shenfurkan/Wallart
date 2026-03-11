@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using WallArt.Services;
 using WallArt.Services.Providers;
@@ -40,9 +40,13 @@ public partial class App : System.Windows.Application
                 var appData = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WallArt");
                 System.IO.Directory.CreateDirectory(appData);
-                System.IO.File.WriteAllText(
-                    System.IO.Path.Combine(appData, "crash_log.txt"),
-                    e.Exception.ToString());
+
+                // Fix 5: Append timestamped entries (not overwrite) and cap size to avoid huge log files
+                var exText = e.Exception.ToString();
+                if (exText.Length > 8000) exText = exText[..8000] + "\n[truncated]";
+                var entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}]\n{exText}\n---\n";
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(appData, "crash_log.txt"), entry);
             }
             catch { /* best-effort */ }
             e.Handled = true;

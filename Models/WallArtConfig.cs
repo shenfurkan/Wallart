@@ -4,6 +4,14 @@ using System.Linq;
 
 namespace WallArt.Models;
 
+public enum TextOverlayPosition
+{
+    TopRight,
+    TopLeft,
+    BottomRight,
+    BottomLeft
+}
+
 public class WallArtConfig
 {
     public int UpdateIntervalMinutes { get; set; } = 60;
@@ -12,6 +20,10 @@ public class WallArtConfig
     public int CacheBounds { get; set; } = 50;
     public bool IsPaused { get; set; } = false;
     public ArtworkResult? ActiveArtwork { get; set; }
+
+    public bool ShowTextOverlay        { get; set; } = true;
+    public bool PreferHorizontalImages { get; set; } = true;
+    public TextOverlayPosition TextPosition { get; set; } = TextOverlayPosition.TopRight;
 
     public List<string> BlacklistedArtworkIds { get; set; } = new();
     public Dictionary<string, bool> ProviderToggles { get; set; } = new();
