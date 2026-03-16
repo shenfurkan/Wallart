@@ -48,21 +48,11 @@ WallArt follows the **MVVM (Model View ViewModel)** architectural pattern to ens
   - **Image Processing**: Handles resizing, cropping, and rendering typography onto images (`ImageProcessingService`).
   - **Configuration**: Manages application settings and user preferences (`ConfigurationService`)
 
-
 ### Install (Recommended)
 
 1. Click the [Download](https://github.com/shenfurkan/Wallart/releases) button
 2. Run the installer. No administrator rights are required.
 3 The application will launch automatically  start on background.
-
-
-## Building from Source
-
-```powershell
-git clone https://github.com/shenfurkan/Wallart.git
-cd WallArt
-dotnet build
-```
 
 ## Uninstallation
 
@@ -77,8 +67,3 @@ This removes the autostart registration and local configuration. You will be pro
 ## Data & Privacy
 
 WallArt interacts exclusively with public museum APIs. No personal data is collected or transmitted. Downloaded images are stored locally in your `Pictures\Wallpaper Art` directory.
-
-## License
-
-This project is open source. See the [LICENSE](LICENSE) file for more details.
-
