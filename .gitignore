@@ -13,6 +13,8 @@ run_utf8.txt
 vuln*.txt
 build_err.txt
 output.json
+crash.txt
+publish/
 
 # IDE & user-specific
 .vs/
