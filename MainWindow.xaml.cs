@@ -22,6 +22,19 @@ public class TextOverlayPositionConverter : IValueConverter
         => DependencyProperty.UnsetValue; // one-way only
 }
 
+public class IntervalConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is int val)
+            return val == -1 ? "Daily at Midnight" : $"{val} minutes";
+        return value?.ToString() ?? "";
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => DependencyProperty.UnsetValue;
+}
+
 public partial class MainWindow : Window
 {
     public bool IsExplicitClose { get; set; } = false;

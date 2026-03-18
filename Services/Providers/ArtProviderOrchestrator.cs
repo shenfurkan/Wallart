@@ -82,45 +82,70 @@ public class ArtProviderOrchestrator
                         }
 
                     _logService.Log($"[{provider.ProviderName}] Selected: {artwork.Title} by {artwork.Artist}");
-                    byte[] bytes;
+                    HttpResponseMessage response;
                     if (artwork.ImageUrl.Contains("artic.edu"))
                     {
-                        // Use HttpClient with AIC-specific headers instead of spawning curl.exe
                         using var request = new HttpRequestMessage(HttpMethod.Get, artwork.ImageUrl);
                         request.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36");
                         request.Headers.TryAddWithoutValidation("AIC-User-Agent", "WallArtClient/1.1 (contact: je.s.se.ldial.4@gmail.com)");
                         request.Headers.TryAddWithoutValidation("Accept", "image/webp,image/apng,image/*,*/*;q=0.8");
                         request.Headers.TryAddWithoutValidation("Referer", "https://www.artic.edu/");
-                        var response = await _httpClient.SendAsync(request, cancellationToken);
-                        response.EnsureSuccessStatusCode();
-                        // Fix 6: Reject non-image responses before they reach the image decoder
-                        var ct = response.Content.Headers.ContentType?.MediaType ?? "";
-                        if (!ct.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-                            throw new Exception($"Unexpected Content-Type '{ct}' — expected an image.");
-                        bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-                        _logService.Log($"[{provider.ProviderName}] Downloaded {bytes.Length / 1024}KB");
+                        response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                     }
                     else
                     {
-                        var response = await _httpClient.GetAsync(artwork.ImageUrl, cancellationToken);
+                        response = await _httpClient.GetAsync(artwork.ImageUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                    }
+
+                    byte[] bytes;
+                    using (response)
+                    {
                         response.EnsureSuccessStatusCode();
-                        // Fix 6: Reject non-image responses before they reach the image decoder
                         var ct = response.Content.Headers.ContentType?.MediaType ?? "";
                         if (!ct.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
                             throw new Exception($"Unexpected Content-Type '{ct}' — expected an image.");
-                        bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-                    }
 
-                    // Orientation check — header-only decode, does not load full image into memory
-                    if (_configService.Current.PreferHorizontalImages)
-                    {
-                        using var ms = new MemoryStream(bytes);
-                        var info = Image.Identify(ms);
-                        if (info != null && info.Width < info.Height)
+                        using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                        using var ms = new MemoryStream();
+                        byte[] buffer = new byte[8192];
+                        int bytesRead;
+                        bool identified = false;
+
+                        while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
                         {
-                            throw new Exception(
-                                $"Skipping portrait image {info.Width}×{info.Height} — retrying.");
+                            ms.Write(buffer, 0, bytesRead);
+                            if (!identified && ms.Length >= 8192 && _configService.Current.PreferHorizontalImages)
+                            {
+                                ms.Position = 0;
+                                var info = Image.Identify(ms);
+                                ms.Position = ms.Length; // restore
+                                if (info != null)
+                                {
+                                    identified = true;
+                                    if (info.Width < info.Height)
+                                    {
+                                        throw new Exception($"Skipping portrait image {info.Width}×{info.Height} — retrying.");
+                                    }
+                                }
+                            }
                         }
+
+                        // One last check in case the image was very small or identify failed earlier
+                        if (!identified && _configService.Current.PreferHorizontalImages)
+                        {
+                            ms.Position = 0;
+                            var info = Image.Identify(ms);
+                            if (info != null && info.Width < info.Height)
+                            {
+                                throw new Exception($"Skipping portrait image {info.Width}×{info.Height} — retrying.");
+                            }
+                        }
+                        
+                        bytes = ms.ToArray();
+                    }
+                    if (artwork.ImageUrl.Contains("artic.edu"))
+                    {
+                        _logService.Log($"[{provider.ProviderName}] Downloaded {bytes.Length / 1024}KB");
                     }
 
                     return (artwork, bytes);

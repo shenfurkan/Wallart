@@ -15,6 +15,7 @@ public class SmartScheduler : IDisposable
     private TimeSpan _interval;
     
     // Internal trackers
+    public DateTime NextRunTime => _nextRunTime;
     private DateTime _nextRunTime;
     private int _started; // 0 = not started, 1 = started (Interlocked)
     private Task? _schedulerTask;
@@ -29,11 +30,20 @@ public class SmartScheduler : IDisposable
         SystemEvents.TimeChanged += OnTimeChanged;
     }
 
+    private DateTime CalculateNextRun(DateTime fromTime)
+    {
+        if (_interval == TimeSpan.FromTicks(-1)) // -1 ticks means Midnight
+        {
+            return fromTime.Date.AddDays(1);
+        }
+        return fromTime.Add(_interval);
+    }
+
     public void Start()
     {
         // Only allow one start; harmless if called again
         if (Interlocked.CompareExchange(ref _started, 1, 0) != 0) return;
-        _nextRunTime = DateTime.Now.Add(_interval);
+        _nextRunTime = CalculateNextRun(DateTime.Now);
 
         _schedulerTask = Task.Run(RunLoopAsync, _cts.Token);
         _logService.Log($"Scheduler started. Expected next run: {_nextRunTime:HH:mm:ss}");
@@ -47,15 +57,25 @@ public class SmartScheduler : IDisposable
     public void UpdateInterval(TimeSpan newInterval)
     {
         _interval = newInterval;
-        _nextRunTime = DateTime.Now.Add(_interval);
+        _nextRunTime = CalculateNextRun(DateTime.Now);
         _logService.Log($"Interval updated. Next run pushed to: {_nextRunTime:HH:mm:ss}");
     }
     
     public void ManualTriggerFired()
     {
         // When manually fired, push the next scheduled run out by the full interval length so they don't overlap
-        _nextRunTime = DateTime.Now.Add(_interval);
+        _nextRunTime = CalculateNextRun(DateTime.Now);
         _logService.Log($"Manual trigger run. Next background run pushed into the future: {_nextRunTime:HH:mm:ss}");
+    }
+
+    public void ScheduleTemporaryRetry(TimeSpan delay)
+    {
+        var retryTime = DateTime.Now.Add(delay);
+        if (retryTime < _nextRunTime)
+        {
+            _nextRunTime = retryTime;
+            _logService.Log($"Scheduled temporary retry for: {_nextRunTime:HH:mm:ss}");
+        }
     }
 
     private async Task RunLoopAsync()

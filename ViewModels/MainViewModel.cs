@@ -20,6 +20,12 @@ public class MainViewModel : ViewModelBase, IDisposable
     private readonly IWallpaperManager _wallpaperManager;
     private SmartScheduler _scheduler;
     private CancellationTokenSource? _cts;
+    private readonly DispatcherTimer _debugTimer;
+
+    public string DebugNextRun => _scheduler != null ? _scheduler.NextRunTime.ToString("yyyy-MM-dd HH:mm:ss") : "Not Scheduled";
+    public string DebugAppUptime => (DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime).ToString(@"dd\.hh\:mm\:ss");
+    public string DebugMemory => $"{System.GC.GetTotalMemory(false) / 1024 / 1024} MB";
+    public string DebugStatus => IsUpdating ? "Fetching Artwork..." : (IsPaused ? "Paused" : "Idle (Waiting)");
 
     public ObservableCollection<string> Logs => _logService.Logs;
 
@@ -27,7 +33,12 @@ public class MainViewModel : ViewModelBase, IDisposable
     public bool IsUpdating
     {
         get => _isUpdating;
-        set { _isUpdating = value; OnPropertyChanged(); }
+        set 
+        { 
+            _isUpdating = value; 
+            OnPropertyChanged(); 
+            OnPropertyChanged(nameof(DebugStatus));
+        }
     }
 
     public bool IsPaused
@@ -39,6 +50,7 @@ public class MainViewModel : ViewModelBase, IDisposable
             {
                 _configService.Update(c => c.IsPaused = value);
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(DebugStatus));
                 if (value) _scheduler.Stop();
                 else _scheduler.Start();
                 _logService.Log(value ? "Background fetching paused." : "Background fetching resumed.");
@@ -56,7 +68,9 @@ public class MainViewModel : ViewModelBase, IDisposable
                 _configService.Update(c => c.UpdateIntervalMinutes = value);
                 OnPropertyChanged();
                 
-                var newInterval = TimeSpan.FromMinutes(value);
+                // If it's -1 (Midnight), the scheduler itself needs to handle the logic.
+                // We pass TimeSpan.FromMinutes(value) which would be negative, so SmartScheduler needs to understand it.
+                var newInterval = value == -1 ? TimeSpan.FromTicks(-1) : TimeSpan.FromMinutes(value);
                 _scheduler?.UpdateInterval(newInterval);
                 
                 // Immediately force an update since the user just changed the settings explicitly
@@ -65,7 +79,7 @@ public class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public ObservableCollection<int> AvailableIntervals { get; } = new(new[] { 60, 360, 1440 });
+    public ObservableCollection<int> AvailableIntervals { get; } = new(new[] { 60, 360, 1440, -1 });
 
     public ObservableCollection<ArtworkResult> History => new(_configService.Current.History);
     
@@ -173,6 +187,7 @@ public class MainViewModel : ViewModelBase, IDisposable
     public ICommand RestoreCommand { get; }
     public ICommand ExitCommand { get; }
     public ICommand OpenCacheCommand { get; }
+    public ICommand SaveLogsCommand { get; }
 
     public MainViewModel(
         IConfigurationService configService,
@@ -204,15 +219,7 @@ public class MainViewModel : ViewModelBase, IDisposable
         });
         RestoreCommand = new RelayCommand(_ => {
             var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
-            bool isClosed = mainWindow == null || (!mainWindow.IsLoaded && !mainWindow.IsVisible && mainWindow.IsInitialized);
-            
-            if (mainWindow == null || isClosed)
-            {
-                mainWindow = new MainWindow(this);
-                System.Windows.Application.Current.MainWindow = mainWindow;
-                mainWindow.Show();
-            }
-            else
+            if (mainWindow != null)
             {
                 mainWindow.ShowInTaskbar = true;
                 mainWindow.Show();
@@ -253,6 +260,19 @@ public class MainViewModel : ViewModelBase, IDisposable
                 });
             }
         });
+        SaveLogsCommand = new RelayCommand(_ => {
+            try
+            {
+                var desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                var logFile = System.IO.Path.Combine(desktop, $"WallArt_Logs_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
+                System.IO.File.WriteAllLines(logFile, _logService.Logs);
+                _logService.Log($"Logs saved to Desktop: {System.IO.Path.GetFileName(logFile)}");
+            }
+            catch (Exception ex)
+            {
+                _logService.Log($"Failed to save logs: {ex.Message}");
+            }
+        });
 
         _wallpaperManager.SetAutostart(_configService.Current.AutostartEnabled);
 
@@ -260,15 +280,34 @@ public class MainViewModel : ViewModelBase, IDisposable
         if (_configService.ConfigLoadWarning is { } warning)
             _logService.Log($"⚠ {warning}");
 
-        _scheduler = new SmartScheduler(UpdateWallpaperAsync, TimeSpan.FromMinutes(UpdateInterval), _logService);
+        var initialInterval = UpdateInterval == -1 ? TimeSpan.FromTicks(-1) : TimeSpan.FromMinutes(UpdateInterval);
+        _scheduler = new SmartScheduler(UpdateWallpaperAsync, initialInterval, _logService);
         if (!IsPaused)
         {
             _scheduler.Start();
         }
+
+        _debugTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _debugTimer.Tick += (s, e) => {
+            OnPropertyChanged(nameof(DebugNextRun));
+            OnPropertyChanged(nameof(DebugAppUptime));
+            OnPropertyChanged(nameof(DebugMemory));
+        };
+        _debugTimer.Start();
         
-        // On boot check if we are overdue 
-        var sinceLastUpdate = DateTime.Now - _configService.Current.LastUpdateTime;
-        if (sinceLastUpdate.TotalMinutes >= UpdateInterval && !IsPaused)
+        // On boot check if we are overdue
+        bool isOverdue;
+        if (UpdateInterval == -1)
+        {
+            isOverdue = _configService.Current.LastUpdateTime.Date < DateTime.Now.Date && _configService.Current.LastUpdateTime != DateTime.MinValue;
+        }
+        else
+        {
+            var sinceLastUpdate = DateTime.Now - _configService.Current.LastUpdateTime;
+            isOverdue = sinceLastUpdate.TotalMinutes >= UpdateInterval;
+        }
+
+        if (isOverdue && !IsPaused)
         {
             _logService.Log("App launched and interval has already expired. Fetching immediately...");
             _ = UpdateWallpaperAsync();
@@ -324,6 +363,7 @@ public class MainViewModel : ViewModelBase, IDisposable
                 {
                     _logService.Log("No local cache available for fallback.");
                 }
+                _scheduler?.ScheduleTemporaryRetry(TimeSpan.FromMinutes(5));
             }
         }
         catch (Exception ex)

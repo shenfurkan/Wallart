@@ -90,13 +90,38 @@ public partial class App : System.Windows.Application
 
     private async void Application_Startup(object sender, StartupEventArgs e)
     {
-        _singleInstanceMutex = new Mutex(true, "Global\\WallArtDaemonSingleInstance", out bool createdNew);
+        bool createdNew;
+        _singleInstanceMutex = new Mutex(true, "Global\\WallArtDaemonSingleInstance", out createdNew);
+
         if (!createdNew)
         {
-            // Another instance is already running; terminate instantly to avoid background process accumulation.
+            // Another instance is already running. Signal it to wake up.
+            try
+            {
+                using var wakeUpEvent = new EventWaitHandle(false, EventResetMode.AutoReset, "Global\\WallArtWakeUpEvent");
+                wakeUpEvent.Set();
+            }
+            catch { }
+            // Terminate instantly to avoid background process accumulation.
             Environment.Exit(0);
             return;
         }
+
+        // We are the primary instance. Start listening for wake-up signals from secondary instances.
+        _ = Task.Run(() =>
+        {
+            using var wakeUpEvent = new EventWaitHandle(false, EventResetMode.AutoReset, "Global\\WallArtWakeUpEvent");
+            while (true)
+            {
+                wakeUpEvent.WaitOne();
+                // When signaled, restore the window
+                Dispatcher.Invoke(() =>
+                {
+                    var mainViewModel = _serviceProvider.GetRequiredService<MainViewModel>();
+                    mainViewModel.RestoreCommand.Execute(null);
+                });
+            }
+        });
 
         if (e.Args.Contains("--autostart"))
         {
@@ -125,6 +150,11 @@ public partial class App : System.Windows.Application
         
         // Ensure MainViewModel is initialized (starts background fetch timer)
         _ = mainViewModel.UpdateInterval;
+
+        // Fix: Ensure MainWindow is explicitly resolved so its NotifyIcon is created, 
+        // and assign it to Application.Current so RestoreCommand can find it.
+        var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+        this.MainWindow = mainWindow;
 
         if (!e.Args.Contains("--autostart"))
         {
