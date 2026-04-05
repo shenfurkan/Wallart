@@ -22,10 +22,6 @@ publish/
 *.suo
 .idea/
 
-# Inno Setup
-*.iss
-Output/
-
 # OS
 Thumbs.db
 desktop.ini
